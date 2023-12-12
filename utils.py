@@ -5,7 +5,13 @@ import numpy as np
 
 def load_results(dir,model_key='L2',seq_key='eval'):
     # all csv files in the root and its subdirectories
-    files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.startswith(dir) and file.endswith("results_recall.csv")]
+    assert os.path.isdir(dir), "ERROR - {} is not a valid directory".format(dir)
+    print("INFO - Loading results from {}".format(dir))
+    
+    #files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.startswith(dir) and file.endswith("results_recall.csv")]
+    files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if  file.endswith("results_recall.csv")]
+    print("INFO - Found {} files".format(len(files)))
+    
     matches = {}
     for file in files:
         file_Struct = file.split("/")

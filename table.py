@@ -3,6 +3,8 @@ import pandas as pd
 from tabulate import tabulate
 import numpy as np
 
+from utils import load_results
+
 def generate_table(table,columns,rows,ranges,k_cand,res=3):
     table_recall = pd.DataFrame(columns=columns, index=rows)
   
@@ -32,7 +34,7 @@ def generate_table(table,columns,rows,ranges,k_cand,res=3):
                     #if label not in  table[model][seq]:
                     #    continue
                     tuple_list.append(label_proxy)
-                    value = table[model][seq][label].values[ktop_idx]
+                    value = table[seq][model][label].values[ktop_idx]
                     rows_local.append(round(value,res))
             
             seq_array = np.array(rows_local).reshape(n_seq,n_sub_grupes)
@@ -45,13 +47,6 @@ def generate_table(table,columns,rows,ranges,k_cand,res=3):
                 if label == "100":
                     label_proxy = "row"
                 tuple_list.append(label_proxy)
-
-            #rows_local.extend(seq_std)
-            #for label in ranges:
-            #    label_proxy = label+"m"
-            #    if label == "100":
-            #        label_proxy = "row"
-            #    tuple_list.append(label_proxy)
         rows_array.append(rows_local)
 
     #header = pd.MultiIndex.from_tuples(tuple_list)
@@ -75,47 +70,22 @@ def compile_results(table,columns,rows,label,top_k,res=3):
     return table_recall
 
 
-def load_results(dir,model_key='L2',seq_key='eval'):
-    # all csv files in the root and its subdirectories
-    files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.startswith(dir) and file.endswith("results_recall.csv")]
-    matches = {}
-    for file in files:
-        file_Struct = file.split("/")
-        model_index = np.array([i for i,field in enumerate(file_Struct) if model_key in field])[0]
-        seq_index = np.array([i for i,field in enumerate(file_Struct) if seq_key in field])[0]
-        filter_model_name = file_Struct[model_index].split("-")[0]
-        
-        if 'eval' in file_Struct[seq_index]:
-            file_Struct[seq_index] = file_Struct[seq_index].split("-")
-            file_Struct[seq_index][0] = 'kitti'
-            file_Struct[seq_index] = "-".join(file_Struct[seq_index][:-1])
-        
-        filter_name = []
-        filter_name.append(file_Struct[seq_index])
-        seq_name = '-'.join(filter_name)
-        # load csv
-        df = pd.read_csv(file)
-
-        if seq_name not in matches:
-            matches[seq_name] = {filter_model_name:df}
-        else:
-            matches[seq_name][filter_model_name] = df
-    return matches
-
 
 if __name__ == "__main__":
-    root = "/home/deep/Dropbox/SHARE/orchards-uk/v2/aa0.5/my_model"
+    root = "/home/deep/Dropbox/SHARE/orchards-uk/v2/aa0.5/baselines"
 
     results = load_results(root)
     models =  list(results.keys())
     print(models)
 
     seqs = ['kitti-strawberry-june23','kitti-orchards-aut22','kitti-orchards-june23','kitti-orchards-sum22']
+    
+    models = ['ORCHNet']
     #seqs = list(results[models[0]].keys())
     seqs.append("Mean")
     seqs.append("Std")
     
-    topk = -1
+    topk = 1
     models = np.sort(models)
     table_r = generate_table(results,seqs,models,['1','10','20','500'],[topk],res=3)
 
