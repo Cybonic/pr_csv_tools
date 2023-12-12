@@ -72,7 +72,7 @@ def compile_results(table,columns,rows,label,top_k,res=3):
 
 
 if __name__ == "__main__":
-    root = "/home/deep/Dropbox/SHARE/orchards-uk/v2/aa0.5/baselines"
+    root = "/home/deep/Dropbox/SHARE/orchards-uk/v2/aa0.5/comparison_with_max_pooling_no_aug"
 
     results = load_results(root)
     models =  list(results.keys())
@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     seqs = ['kitti-strawberry-june23','kitti-orchards-aut22','kitti-orchards-june23','kitti-orchards-sum22']
     
-    models = ['ORCHNet']
+    models = ['pointnetORCHNetMultiHead']
     #seqs = list(results[models[0]].keys())
     seqs.append("Mean")
     seqs.append("Std")
