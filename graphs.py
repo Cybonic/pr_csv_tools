@@ -5,6 +5,13 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+
+COLORS     = ["blue","red", "green","orange","purple","brown","pink","gray","olive","cyan"]
+LINESTYLES = ["-","-.", "--","-", "-.", "--","-", "-.", "--","-", "-.", "--"]
+SIZE_PARAM = 25
+LINEWIDTH  = 4
+   
+    
 def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
     # all csv files in the root and its subdirectories
     files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.endswith("results_recall.csv")]
@@ -44,106 +51,78 @@ def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
     return matches,sequences,models
 
 
-def gen_range_fig(seqs,models,top,results,save_dir,size_param=15,linewidth=5,**args):
+def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,linewidth=5,**args):
     
-    
-    index = [1,5,10,15,20,30,40,50] # ranges
-    
+    show_legend = True
+    if 'show_legend' in args:
+        show_legend = args['show_legend']
+        
     graph_dir = os.path.join(save_dir,f"top")
     os.makedirs(graph_dir, exist_ok=True)
     
-    for seq in seqs:
+    for seq,ranges in zip(seqs,seq_ranges):
         model_array = {}
         
         for model in models:
             array = []
-            
-            print(model,seq)
-            for dist in index:
+  
+            for dist in ranges:
                 recall_array = []
                 for key, value in results[seq][model].items():
-                
-                    recall_table = results[seq][model][key]['df'][str(dist)]
-                    recall_value = recall_table.loc[top-1]
+                    recall_table = np.array(results[seq][model][key]['df'][str(dist)])
+                    #print(recall_table)
+                    
+                    recall_value = recall_table[top-1]
                     recall_array.append(recall_value)
-                max_value = np.array(recall_array).max()
+                    
+                max_value = np.array(recall_array).max() # When There are more than one prediction, get the max
                 array.append(max_value)
 
             model_array[model] =  array#,'x':crop_xx_axis}
     
-        df = pd.DataFrame(model_array, index=index)
-        plt.figure(figsize=(10,10))
+        df = pd.DataFrame(model_array, index=ranges)
+        plt.figure(figsize=(10,12))
+        #plt.figure()
+        model_names = models
+        if 'new_model_name' in args:
+            model_names = args['new_model_name']
         
+        if 'new_seq_name' in args:
+            seq = args['new_seq_name']
+            
         if 'colors' in args:
             colors = args['colors']
             linestyles = args['linestyles']
             for i,model in enumerate(models):
-                sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model)
+                if show_legend:
+                    sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model_names[i])
+                else:
+                    sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i])
         else:
-            sns.lineplot( data=df,linewidth=linewidth)
+            sns.lineplot(data=df,linewidth=linewidth)
 
-        file = os.path.join(graph_dir,f'{seq}Top{top}.pdf')
+      
+        str_top_graph = str(top)
+        str_top_pdf   = str(top)
+            
+        if top == -1:
+            str_top_graph = '1%'
+            str_top_pdf = '1p'
+                   
+        file = os.path.join(graph_dir,f'{seq}-Top{str_top_pdf}.pdf')
         plt.xlabel('Range[m]',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.ylabel(f'Recall@{top}',fontsize=size_param, labelpad=5)  # Set x-axis label here
+        plt.ylabel(f'Recall@{str_top_graph}',fontsize=size_param, labelpad=5)  # Set x-axis label here
         plt.tick_params(axis='y', labelsize=size_param) 
         plt.tick_params(axis='x', labelsize=size_param)
         # turn on grid  
+        plt.ylim(0, 1)
         plt.grid()
-        plt.legend(fontsize=size_param)
+        if show_legend:
+            plt.legend(fontsize=size_param)
+        #plt.legend(fontsize=size_param)
         plt.savefig(file, transparent=True)
 
 
-
-
-def gen_crop_fig(seqs,models,top,results,save_dir,crop_range=['10m','20m','30m','40m','50m','60m','100m','150m','200m'],size_param=15,linewidth=5):
-    
-    range_key = '10'
-    graph_dir = os.path.join(save_dir,f"crop")
-    os.makedirs(graph_dir, exist_ok=True)
-    
-    
-    for seq in seqs:
-        model_array = {}
-        dataframe_collection = {} 
-        crop_xx_axis = []
-        array = []
-        for dist in crop_range:
-            for model in models:
-                recall_array = []
-                print(model,seq)
-                for key, value in results[seq][model].items():
-                    path_structures = value['path'].split("/")
-                    if dist in path_structures:
-                        recall_table = results[seq][model][key]['df'][range_key]
-                        recall_value = recall_table.loc[top-1]
-                        recall_array.append(recall_value)
-            max_value = np.array(recall_array).max()
-            array.append(max_value)
-            crop_value = int(dist[:-1])
-            crop_xx_axis.append(crop_value)
-
-            model_array[model] =  array#,'x':crop_xx_axis}
-            
-        
-        df = pd.DataFrame(model_array,index=crop_xx_axis) 
-        
-        plt.figure(figsize=(10,10))
-         
-        sns.lineplot(data = df ,linewidth=linewidth)
-
- 
-        file = os.path.join(graph_dir,f'{seq}Top{top}.pdf')
-        plt.xlabel('m',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.ylabel(f'Recall@{top}',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.tick_params(axis='y', labelsize=size_param) 
-        plt.tick_params(axis='x', labelsize=size_param)
-
-        plt.ylim(0, 1)
-        # turn on grid  
-        plt.grid()
-
-        plt.legend(fontsize=size_param)
-        plt.savefig(file, transparent=True)   
 
 
 
@@ -153,11 +132,14 @@ def gen_top25_fig(seqs,models,dist,results,save_dir,size_param=15,linewidth=5,**
     graph_dir = os.path.join(save_dir,f"range")
     os.makedirs(graph_dir, exist_ok=True)
     
+    show_legend = True
+    if "show_legend" in args:
+        show_legend = args["show_legend"]
+        
     top = np.arange(1,25,1)
     for seq in seqs:
         model_array = {}        
         for model in models:
-            array = []
             recall_array = []
             key_array = []
             for key, value in results[seq][model].items():
@@ -169,14 +151,27 @@ def gen_top25_fig(seqs,models,dist,results,save_dir,size_param=15,linewidth=5,**
             max_key_idx = np.array(key_array).argmax()
             max_value = np.array(recall_array)[max_key_idx]
             model_array[model] =  max_value#,'x':crop_xx_axis}
-    
+
+        
+        # Plot the graph
         df = pd.DataFrame(model_array, index=top)
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(10,12))
+        model_names = models
+        
+        if 'new_model_name' in args:
+            model_names = args['new_model_name']
+        
+        if 'new_seq_name' in args:
+            seq = args['new_seq_name']
+            
         if 'colors' in args:
             colors = args['colors']
             linestyles = args['linestyles']
             for i,model in enumerate(models):
-                sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model)
+                if show_legend:
+                    sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model_names[i])
+                else:
+                    sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i])
         else:
             sns.lineplot( data=df,linewidth=linewidth)
         
@@ -184,45 +179,77 @@ def gen_top25_fig(seqs,models,dist,results,save_dir,size_param=15,linewidth=5,**
         plt.xlabel('Top k',fontsize=size_param, labelpad=5)  # Set x-axis label here
         plt.ylabel('Recall@k',fontsize=size_param, labelpad=5)  # Set x-axis label here
         plt.grid()
+        plt.ylim(0, 1)
         plt.tick_params(axis='y', labelsize=size_param) 
         plt.tick_params(axis='x', labelsize=size_param)
-        plt.legend(fontsize=size_param)
+        
+        if show_legend:
+            plt.legend(fontsize=size_param)
         plt.savefig(file,transparent=True)
+
+
+
+def abstract_range_fig(sequences,models,seq_ranges,results,save_dir,new_names,show_legend_flag):
+    
+    if show_legend_flag:
+        save_dir = save_dir + "_legend"
+        
+    for i in [1,-1]:
+        gen_range_fig(sequences,models,i,seq_ranges,results,save_dir,
+                      size_param     = SIZE_PARAM,
+                      linewidth      = LINEWIDTH,
+                      colors         = COLORS,
+                      linestyles     = LINESTYLES, 
+                      new_model_name = new_names,
+                      show_legend    = show_legend_flag)
+        
     
 if __name__ == "__main__":
-    root = "/home/deep/Dropbox/SHARE/orchards-uk/v2/aa0.5/baselines"
+    root = "/home/deep/workspace/orchnet/v2/aa-0.5/saved_model_data/final@range1"
 
-    size_param = 15
     
-    save_dir = "saved_graphs_my_model/baselines"
+    save_dir = "saved_graphs_paper_final@range1_paper"
 
     results,sequences,models = load_results(root)
- 
     
-    sota_models = ['LOGG3DNet','PointNetVLAD','OverlapTransformer','PointORCHNet']
-    baseline_models = ['PointNetSPoC','PointNetMAC','PointNetGeM','PointORCHNet']
+    print(models)
     
-    #seqs   = ['kitti-orchards-sum22', 'kitti-orchards-aut22' 'kitti-strawberry-june23','kitti-orchards-june23']
+    sota_models = ['PointNetSPoC','PointNetGeM','PointNetMAC','LOGG3D','PointNetVLAD','overlap_transformer']
+    sequences   = ['kitti-strawberry-june23','kitti-orchards-sum22', 'kitti-orchards-june23','kitti-orchards-aut22']# 'kitti-strawberry-june23']
     
-    dist = '500'
-    
-    
-    colors = ["red", "green","orange","blue","purple","brown","pink","gray","olive","cyan"]
-    linestyles = [ "-.", "--","-","-", "-.", "--","-", "-.", "--","-", "-.", "--"]
-
+    new_names = ['PointNetAP','PointNetGeM','PointNetMAC','LOGG3D','PointNetVLAD','OverlapTransformer','PointNetMAC']
     # Create directory
     
-    #for i in [1,5,10]:
-    #    gen_crop_fig(seqs,models,i,results,save_dir,crop_range=['10m','50m','100m','150m','200m'],size_param=25,linewidth=4)
+    range50m = list(range(1,50,1))
+    range100m = list(range(1,100,1))
     
-    for i in [1,5,10]:
-        gen_range_fig(sequences,baseline_models,i,results,save_dir,size_param=25,linewidth=4,colors=colors,linestyles=linestyles)
+    seq_ranges = [range100m,range50m,range50m,range50m]
+    show_legend_flag = True
     
-    for i in [10,20,500]:
-   
-        gen_top25_fig(sequences,baseline_models,str(i),results,save_dir,size_param=25,colors=colors,linestyles=linestyles)
+    abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,True)
+    abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,False)
     
     
-    plt.show()
+    exit()
+    for i in [1,-1]:
+        gen_range_fig(sequences,sota_models,i,seq_ranges,results,sota_dir,
+                      size_param     = 25,
+                      linewidth      = 4,
+                      colors         = COLORS,
+                      linestyles     = LINESTYLES, 
+                      new_model_name = new_sota_name,
+                      show_legend    = show_legend_flag)
+    
+    for i in [1,10,20,100]:
+        gen_top25_fig(sequences,sota_models,str(i),results,sota_dir,
+                      size_param     = 25,
+                      colors         = COLORS,
+                      linestyles     = LINESTYLES,
+                      new_model_name = new_sota_name,
+                      show_legend    = show_legend_flag)
+        #gen_top25_fig(sequences,baseline_models,str(i),results,baselines_dir,size_param=25,colors=colors,linestyles=linestyles, new_model_name=new_baseline_name)
+        
+    
+    
 
   
