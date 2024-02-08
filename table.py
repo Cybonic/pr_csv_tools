@@ -9,7 +9,7 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
     table_recall = pd.DataFrame(columns=columns, index=rows)
   
     n_sub_grupes = len(ranges)
-    n_seq = len(seqs[:-2])
+    n_seq = len(columns[:-2])
     rows_array = []
     for model in rows:
         tuple_list = []
@@ -43,11 +43,12 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
                         recall_table = table[seq][model][key]['df'][str(range)]
                         recall_value = np.array(recall_table)
                         print(recall_value)
-                        recall_array.append(recall_value[ktop-1])
+                        if ktop == -1:
+                            recall_array.append(recall_value[-2])
+                        else:
+                            recall_array.append(recall_value[ktop_idx])
                     
                     max_value = np.array(recall_array).max()
-                
-                    #value = table[seq][model]['df'][label].values[ktop_idx]
                     rows_local.append(round(max_value,res))
             
             seq_array = np.array(rows_local).reshape(n_seq,n_sub_grupes)
@@ -85,23 +86,23 @@ def compile_results(table,columns,rows,label,top_k,res=3):
 
 
 if __name__ == "__main__":
-    root = "/home/deep/Dropbox/SHARE/orchards-uk/code/place_recognition_models/saved_model_data/final@range1"
-
+    root = "/home/deep/workspace/SPCoV/predictions/iros24/"
+    save_dir = "iros24"
     results,sequences,models  = load_results(root)
     #models =  list(results.keys())
-    #print(models)
+    print(models)
+    seq = sequences.tolist()
 
-    seqs = ['kitti-strawberry-june23','kitti-orchards-aut22','kitti-orchards-june23','kitti-orchards-sum22']
-    sota_models = ['LOGG3D','PointNetVLAD','overlap_transformer','pointnetORCHNetMultiHead','pointnetORCHNetMultiHeadMAXPolling']
-    baseline_models = ['PointNetSPoC','PointNetMAC','PointNetGeM','pointnetORCHNetMultiHead','pointnetORCHNetMultiHeadMAXPolling']
+    #seqs = ['uk-kitti-strawberry-june23','uk-kitti-orchards-aut22','uk-kitti-orchards-june23','uk-kitti-orchards-sum22']
+    sota_models = ['SPCov3DCOVfcpeLazyTripletLoss_L2pcl_binary_lossM0.5','LOGG3D','PointNetVLAD','overlap_transformer']#,'PointNetSPoC','PointNetMAC']
     #models = ['pointnetORCHNetMultiHead']
     #seqs = list(results[models[0]].keys())
-    seqs.append("Mean")
-    seqs.append("Std")
+    seq.append("Mean")
+    seq.append("Std")
     
     topk = -1
     #models = np.sort(baseline_models)
-    table_r = generate_table(results,baseline_models,seqs,[1,10,20,100],[topk],res=3)
+    table_r = generate_table(results,sota_models,seq,[5],[topk],res=3)
 
     topk = str(topk)
     if topk == '-1':
@@ -112,14 +113,14 @@ if __name__ == "__main__":
     latex_table = tabulate(table_r, tablefmt="latex", headers="keys",floatfmt=".3f")
     latex_table = latex_table.replace(" ", "")
     
-    file = os.path.join("my_model",f"recall@{topk}_paper.tex")
-    os.makedirs(os.path.dirname(file), exist_ok=True)
+    file = os.path.join(save_dir,f"recall@{topk}.tex")
+    os.makedirs(save_dir, exist_ok=True)
     f = open(file, "w")
     f.write(latex_table)
     f.close()
 
     print("\n")
-    print(seqs)
+    print(seq)
     print(latex_table)
 
     exit()

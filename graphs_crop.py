@@ -107,16 +107,16 @@ if __name__ == "__main__":
 
     size_param = 15
     
-    save_dir = "saved_graphs_my_model/crop_evaluation"
+    save_dir = "saved_graphs_paper/crop_evaluation"
 
     results,sequences,models = load_results(root)
  
     # sota_models = ['LOGG3DNet','PointNetVLAD','OverlapTransformer','PointORCHNet']
     models = ['pointnetORCHNetMultiHead']
     
-    seqs   =['kitti-orchards-aut22','kitti-orchards-sum22'] #  ['kitti-orchards-sum22',  'kitti-strawberry-june23','kitti-orchards-june23']
+    seqs   =['kitti-orchards-aut22','kitti-orchards-sum22','kitti-orchards-june23','kitti-strawberry-june23'] #  ['kitti-orchards-sum22',  'kitti-strawberry-june23','kitti-orchards-june23']
     
-    name_seqs   =['ON22','OJ22']
+    name_seqs   =['ON22','OJ22','OJ23','SJ23']
     dist = '500'
     
     
@@ -125,8 +125,8 @@ if __name__ == "__main__":
 
     # Create directory
     
-    for i in [1,5,10]:
-        gen_crop_fig(seqs,models,i,results,save_dir,crop_range=['10m','50m','100m','150m','200m'],size_param=25,linewidth=4,new_name=name_seqs)
+    for i in [1,5,10,20]:
+        gen_crop_fig(seqs,models,i,results,save_dir,crop_range=['10m','50m','100m','150m'],size_param=25,linewidth=4,new_name=name_seqs)
     
     
     plt.show()
