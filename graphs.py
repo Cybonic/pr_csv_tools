@@ -65,7 +65,7 @@ def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,line
     if 'show_legend' in args:
         show_legend = args['show_legend']
         
-    graph_dir = os.path.join(save_dir,f"top")
+    graph_dir = os.path.join(save_dir,f"range")
     os.makedirs(graph_dir, exist_ok=True)
     
     
@@ -150,6 +150,7 @@ def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,line
         plt.tick_params(axis='x', labelsize=size_param)
         # turn on grid  
         plt.ylim(0, 1)
+        plt.xlim(0, max(ranges))
         plt.grid()
         if show_legend:
             plt.legend(fontsize=size_param)
@@ -278,35 +279,39 @@ def abstract_range_fig(sequences,models,seq_ranges,results,save_dir,new_names,sh
         
     
 if __name__ == "__main__":
-    root = "/home/deep/workspace/SPCoV/predictions/iros24/"
+    root = "/home/tiago/workspace/SPCoV/predictions/iros24/"
 
     
     save_dir = "saved_graphs_paper_iros24v2"
 
     results,sequences,models = load_results(root)
     
-    print(models)
+    print('\n'.join(models))
     
     print('\n'.join(sequences))
     
-    sota_models = ['SPCov3DCOVfcpeLazyTripletLoss_L2pcl_binary_lossM0.5','LOGG3D','PointNetVLAD','overlap_transformer']
+    sequences = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-greenhouse-e3','kitti-uk-orchards-aut22','kitti-uk-strawberry-june23']
+    
+    models = ['SPVSoAP3DSoAPno_logno_pnfc','SPVSoAP3DSoAPlogno_pnfc','SPVSoAP3DSoAPlogpnfc','SPCov3DCOVlayer_covfcpeno_dm','SPCov3DCOVlayer_covfcno_pe','SPCov3DCOVlayer_covfcpe','LOGG3D','PointNetVLAD','overlap_transformer'] # 'PointNetSPoC'
     #sequences   = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-strawberry-june23','kitti-orchards-sum22', 'kitti-orchards-june23','kitti-orchards-aut22']# 'kitti-strawberry-june23']
     
-    new_names = ['SPCov3D','LOGG3D-Net','PointNetVLAD','OverlapTransformer']
+    new_names = ['SPVSoAP3DSoAPno_logno_pnfc','SPVSoAP3DSoAP-log-nopn-fc','SPVSoAP3DSoAP_log_pn_fc','SPCov3D_pe_nodm','SPCov3D_nope','SPCov3D','LOGG3D-Net','PointNetVLAD','OverlapTransformer'] # 'PointNetSPoC'
     # Create directory
     
-    range50m = list(range(1,50,1))
-    range100m = list(range(1,100,1))
+    range50m = list(range(1,51,1))
+    range100m = list(range(1,101,1))
+    range120m = list(range(1,120,1))
+    range60m = list(range(1,61,1))
     
-    seq_ranges = [range100m,range100m,range100m,range100m,range100m,range100m]
-    show_legend_flag = False
+    seq_ranges = [range100m,range50m,range60m,range50m,range50m,range120m]
+    show_legend_flag = True
     
     #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,True)
     #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,False)
     
     
-    for i in [1,-1]:
-        gen_range_fig(sequences,sota_models,i,seq_ranges,results,save_dir,
+    for i in [1,5,10,-1]:
+        gen_range_fig(sequences,models,i,seq_ranges,results,save_dir,
                       size_param     = 25,
                       linewidth      = 5,
                       colors         = COLORS,
@@ -315,7 +320,7 @@ if __name__ == "__main__":
                       show_legend    = show_legend_flag)
     
     for i in [1,5,10,20,100]:
-        gen_top25_fig(sequences,sota_models,str(i),results,save_dir,
+        gen_top25_fig(sequences,models,str(i),results,save_dir,
                       size_param     = 25,
                       linewidth      = 5,
                       colors         = COLORS,

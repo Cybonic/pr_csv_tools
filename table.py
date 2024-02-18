@@ -9,9 +9,10 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
     table_recall = pd.DataFrame(columns=columns, index=rows)
   
     n_sub_grupes = len(ranges)
-    n_seq = len(columns[:-2])
+   
     rows_array = []
     for model in rows:
+        n_seq = 0 # len(columns[:-2])
         tuple_list = []
         rows_local = []
         for ktop in k_cand:
@@ -31,13 +32,22 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
                     sq_name = sq[0][0]+sq[1][0]+sq[1][-2:]
 
                     label_proxy = str(range)+"m"
-                    if range == ranges[-1]:
+                    if range == ranges[-1] and len(ranges) > 1:
                         label_proxy = "row"
                     
                     #if label not in  table[model][seq]:
                     #    continue
-                    tuple_list.append(label_proxy)
+                    
                     recall_array = []
+                    
+                    # check if the model is in the table
+                    if not model in table[seq]:
+                        continue
+                    
+                    tuple_list.append(label_proxy)
+                    # count the number of sequences
+                    n_seq+=1
+                    
                     for key, value in table[seq][model].items():
                 
                         recall_table = table[seq][model][key]['df'][str(range)]
@@ -52,7 +62,7 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
                     rows_local.append(round(max_value,res))
             
             seq_array = np.array(rows_local).reshape(n_seq,n_sub_grupes)
-            seq_mean = np.mean(seq_array,axis=0)
+            seq_mean = np.round(np.mean(seq_array,axis=0),4)
             seq_std = np.std(seq_array,axis=0)
             
             rows_local.extend(seq_mean)
@@ -86,7 +96,7 @@ def compile_results(table,columns,rows,label,top_k,res=3):
 
 
 if __name__ == "__main__":
-    root = "/home/deep/workspace/SPCoV/predictions/iros24/"
+    root = "/home/tiago/workspace/SPCoV/predictions/iros24/"
     save_dir = "iros24"
     results,sequences,models  = load_results(root)
     #models =  list(results.keys())
@@ -94,15 +104,21 @@ if __name__ == "__main__":
     seq = sequences.tolist()
 
     #seqs = ['uk-kitti-strawberry-june23','uk-kitti-orchards-aut22','uk-kitti-orchards-june23','uk-kitti-orchards-sum22']
-    sota_models = ['SPCov3DCOVfcpeLazyTripletLoss_L2pcl_binary_lossM0.5','LOGG3D','PointNetVLAD','overlap_transformer']#,'PointNetSPoC','PointNetMAC']
-    #models = ['pointnetORCHNetMultiHead']
-    #seqs = list(results[models[0]].keys())
-    seq.append("Mean")
-    seq.append("Std")
+    models = ['SPVSoAP3DSoAPno_logno_pnfc','SPVSoAP3DSoAPlogno_pnfc','SPVSoAP3DSoAPlogpnfc','SPCov3DCOVlayer_covfcpeno_dm']#'SPCov3DCOVlayer_covfcno_pe','SPCov3DCOVlayer_covfcpe','LOGG3D','PointNetVLAD','overlap_transformer'] # 'PointNetSPoC'
+    #sequences   = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-strawberry-june23','kitti-orchards-sum22', 'kitti-orchards-june23','kitti-orchards-aut22']# 'kitti-strawberry-june23']
     
-    topk = -1
+    new_names = ['SPVSoAP3DSoAPno_logno_pnfc','SPVSoAP3DSoAP-log-nopn-fc','SPVSoAP3DSoAP_log_pn_fc','SPCov3D_pe_nodm']#'SPCov3D_nope','SPCov3D','LOGG3D-Net','PointNetVLAD','OverlapTransformer'] # 'PointNetSPoC'
+    
+    #seqs = list(results[models[0]].keys())
+    sequences = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-greenhouse-e3','kitti-uk-orchards-aut22','kitti-uk-strawberry-june23']
+    
+    
+    sequences.append("Mean")
+    sequences.append("Std")
+    
+    topk = 1
     #models = np.sort(baseline_models)
-    table_r = generate_table(results,sota_models,seq,[5],[topk],res=3)
+    table_r = generate_table(results,models,sequences,[5],[topk],res=3)
 
     topk = str(topk)
     if topk == '-1':
@@ -120,7 +136,7 @@ if __name__ == "__main__":
     f.close()
 
     print("\n")
-    print(seq)
+    print(sequences)
     print(latex_table)
 
     exit()
