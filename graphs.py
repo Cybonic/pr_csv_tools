@@ -26,19 +26,37 @@ def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
     matches = {}
     for file in files:
         file_Struct = file.split("/")
-        model_index = np.array([i for i,field in enumerate(file_Struct) if model_key in field])[0]
-        seq_index = np.array([i for i,field in enumerate(file_Struct) if seq_key in field])[0]
-        score_index = np.array([i for i,field in enumerate(file_Struct) if score_key in field])[0]
-        filter_model_name = ''.join(file_Struct[model_index].split("-")[:-1])
+        model_index = np.array([i for i,field in enumerate(file_Struct) if model_key in field])
         
-        if 'eval' in file_Struct[seq_index]:
-            file_Struct[seq_index] = file_Struct[seq_index].split("-")
-            file_Struct[seq_index][0] = 'kitti'
-            file_Struct[seq_index] = "-".join(file_Struct[seq_index][:-1])
+        # No match continue
+        if len(model_index) == 0:
+            continue 
         
-        filter_name = []
-        filter_name.append(file_Struct[seq_index])
-        seq_name = '-'.join(filter_name)
+        model_index = model_index[0]
+        seq_index = np.array([i for i,field in enumerate(file_Struct) if seq_key in field])
+        # No match continue
+        if len(seq_index) == 0:
+            continue
+        
+        seq_index = seq_index[0]
+        score_index = np.array([i for i,field in enumerate(file_Struct) if score_key in field])
+        # No match continue
+        if len(score_index) == 0:
+            continue
+        
+        # Clear name
+        file_Struct[seq_index] = file_Struct[seq_index].split("-")[-1]
+            
+        score_index = score_index[0]
+        
+        filter_model_name = file_Struct[model_index]
+        
+        
+            #file_Struct[seq_index] = "-".join(file_Struct[seq_index][:-1])
+        
+        #filter_name = []
+        #filter_name.append()
+        seq_name = file_Struct[seq_index]
         sequence_pool.append(seq_name)
         model_pool.append(filter_model_name)
         # load csv
@@ -59,8 +77,9 @@ def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
 
 
 
-def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,linewidth=5,**args):
+def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,linewidth=5, show_label = True, **args):
     
+    show_label = show_label
     show_legend = True
     if 'show_legend' in args:
         show_legend = args['show_legend']
@@ -144,14 +163,18 @@ def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,line
             str_top_pdf = '1p'
                    
         file = os.path.join(graph_dir,f'{seq}-Top{str_top_pdf}.pdf')
-        plt.xlabel('Range[m]',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.ylabel(f'Recall@{str_top_graph}',fontsize=size_param, labelpad=5)  # Set x-axis label here
+        
+        if show_label:
+            plt.xlabel('Range[m]',fontsize=size_param, labelpad=5)  # Set x-axis label here
+            plt.ylabel(f'Recall@{str_top_graph}',fontsize=size_param, labelpad=5)  # Set x-axis label here
+        
         plt.tick_params(axis='y', labelsize=size_param) 
         plt.tick_params(axis='x', labelsize=size_param)
         # turn on grid  
         plt.ylim(0, 1)
         plt.xlim(0, max(ranges))
         plt.grid()
+        
         if show_legend:
             plt.legend(fontsize=size_param)
         #plt.legend(fontsize=size_param)
@@ -258,6 +281,7 @@ def gen_top25_fig(seqs,models,dist,results,save_dir,size_param=15,linewidth=5,**
         
         if show_legend:
             plt.legend(fontsize=size_param)
+            
         plt.savefig(file,transparent=True)
         plt.close()
 
@@ -290,12 +314,12 @@ if __name__ == "__main__":
     
     print('\n'.join(sequences))
     
-    sequences = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-greenhouse-e3','kitti-uk-orchards-aut22','kitti-uk-strawberry-june23']
+    #sequences = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-greenhouse-e3','kitti-uk-orchards-aut22','kitti-uk-strawberry-june23']
     
-    models = ['SPVSoAP3DSoAPno_logno_pnfc','SPVSoAP3DSoAPlogno_pnfc','SPVSoAP3DSoAPlogpnfc','SPCov3DCOVlayer_covfcpeno_dm','SPCov3DCOVlayer_covfcno_pe','SPCov3DCOVlayer_covfcpe','LOGG3D','PointNetVLAD','overlap_transformer'] # 'PointNetSPoC'
+    models = ['SPVSoAP3DSoAPlogpnfc','LOGG3D','PointNetVLAD','overlap_transformer'] # 'PointNetSPoC'
     #sequences   = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-strawberry-june23','kitti-orchards-sum22', 'kitti-orchards-june23','kitti-orchards-aut22']# 'kitti-strawberry-june23']
     
-    new_names = ['SPVSoAP3DSoAPno_logno_pnfc','SPVSoAP3DSoAP-log-nopn-fc','SPVSoAP3DSoAP_log_pn_fc','SPCov3D_pe_nodm','SPCov3D_nope','SPCov3D','LOGG3D-Net','PointNetVLAD','OverlapTransformer'] # 'PointNetSPoC'
+    new_names = ['SPVSoAP3D','LOGG3D-Net','PointNetVLAD','OverlapTransformer'] # 'PointNetSPoC'
     # Create directory
     
     range50m = list(range(1,51,1))
@@ -304,7 +328,7 @@ if __name__ == "__main__":
     range60m = list(range(1,61,1))
     
     seq_ranges = [range100m,range50m,range60m,range50m,range50m,range120m]
-    show_legend_flag = True
+    show_legend_flag = False
     
     #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,True)
     #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,False)
@@ -312,17 +336,18 @@ if __name__ == "__main__":
     
     for i in [1,5,10,-1]:
         gen_range_fig(sequences,models,i,seq_ranges,results,save_dir,
-                      size_param     = 25,
-                      linewidth      = 5,
+                      size_param     = 40,
+                      linewidth      = 10,
                       colors         = COLORS,
                       linestyles     = LINESTYLES, 
                       new_model_name = new_names,
-                      show_legend    = show_legend_flag)
+                      show_legend    = show_legend_flag,
+                      show_label     = False)
     
     for i in [1,5,10,20,100]:
         gen_top25_fig(sequences,models,str(i),results,save_dir,
                       size_param     = 25,
-                      linewidth      = 5,
+                      linewidth      = 10,
                       colors         = COLORS,
                       linestyles     = LINESTYLES,
                       new_model_name = new_names,
