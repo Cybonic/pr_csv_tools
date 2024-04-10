@@ -6,7 +6,7 @@ import seaborn as sns
 
 import matplotlib
 import matplotlib.pyplot as plt
-
+from tqdm import tqdm
 
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
@@ -19,12 +19,12 @@ LINEWIDTH  = 5
     
 def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
     # all csv files in the root and its subdirectories
-    files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.endswith("results_recall.csv")]
+    files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.endswith(".csv")]
     
     sequence_pool = []
     model_pool = []
     matches = {}
-    for file in files:
+    for file in tqdm(files,total=len(files)):
         file_Struct = file.split("/")
         model_index = np.array([i for i,field in enumerate(file_Struct) if model_key in field])
         
@@ -45,29 +45,33 @@ def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
             continue
         
         # Clear name
-        file_Struct[seq_index] = file_Struct[seq_index].split("-")[-1]
+        # remove set of strings from the name
+        #file_Struct[seq_index] = file_Struct[seq_index].split()[-1]
             
         score_index = score_index[0]
         
-        filter_model_name = file_Struct[model_index]
-        
-        
-            #file_Struct[seq_index] = "-".join(file_Struct[seq_index][:-1])
-        
-        #filter_name = []
-        #filter_name.append()
+        model_name = file_Struct[model_index]
         seq_name = file_Struct[seq_index]
+        score_name = file_Struct[score_index]
+        
+        # Remove keys from the names
+        model_name = model_name.replace(model_key,"")
+        seq_name = seq_name.replace(seq_key,"")
+        score_name = score_name.replace(score_key,"")
+        
         sequence_pool.append(seq_name)
-        model_pool.append(filter_model_name)
+        model_pool.append(model_name)
         # load csv
         df = pd.read_csv(file)
 
         if seq_name not in matches:
-            matches[seq_name] = {filter_model_name:{file_Struct[score_index]:{'df':df,'path':file}}}
-        elif filter_model_name not in matches[seq_name]:
-            matches[seq_name][filter_model_name] = {file_Struct[score_index]:{'df':df,'path':file}}
+            matches[seq_name] = {model_name:{score_name:[{'df':df,'path':file}]}}
+        elif model_name not in matches[seq_name]:
+            matches[seq_name][model_name] = {score_name:[{'df':df,'path':file}]}
+        elif score_name in matches[seq_name][model_name]:
+            matches[seq_name][model_name][score_name].append({'df':df,'path':file})
         else:
-            matches[seq_name][filter_model_name][file_Struct[score_index]] = {'df':df,'path':file}
+            raise ValueError(f"Error: {seq_name} {model_name} {score_name}")
     
     sequences = np.unique(sequence_pool)
     models = np.unique(model_pool)
