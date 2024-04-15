@@ -86,19 +86,21 @@ def run_table(root,files_to_show,seq_order,model_order, topk, range, tag, save_d
     print(sequences)
     print(latex_table)
     
+    return table_r
+    
 
 if __name__ == "__main__":
     root = "/home/tiago/workspace/pointnetgap-RAL/RALv2/predictions_RALv1"
     save_dir = "RALv2"
     sequences = ['SJ23','ON22','OJ23','OJ22']
-    #topk = -1
-    
+    topk = 1
+    target_range = 5
     
     files_to_show = ["recall.csv"]
-    run_table(root,files_to_show,sequences,model_order=None, topk=-1, range = 10, tag = 'global', save_dir = save_dir)
+    run_table(root,files_to_show,sequences,model_order=None, topk=topk, range = target_range, tag = 'global', save_dir = save_dir)
 
     
     
     files_to_show = ["recall_0.csv","recall_1.csv","recall_2.csv","recall_3.csv","recall_4.csv","recall_5.csv"]
-    run_table(root,files_to_show,sequences,model_order=None, topk=-1, range = 10, tag = 'segments', save_dir = save_dir)
+    run_table(root,files_to_show,sequences,model_order=None, topk=topk, range = target_range, tag = 'segments', save_dir = save_dir)
 
