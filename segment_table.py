@@ -3,13 +3,13 @@ import pandas as pd
 from tabulate import tabulate
 import numpy as np
 
-from graphs import load_results
+from utils import load_results, find_file
 
-def find_file(data_struct:list,file:str):
-    for i,score in enumerate(data_struct):
-        if score['path'].endswith(file):
-            return i
-    return -1
+
+
+
+
+
 
 def generate_table(results,models,sequences,files_to_show,topk,range=10,res=3):
     
@@ -47,9 +47,13 @@ def generate_table(results,models,sequences,files_to_show,topk,range=10,res=3):
     return pd.DataFrame(table, columns=unqiue_columns, index=models)   
 
 
-def run_table(root,files_to_show,seq_order,model_order, topk, range, tag, save_dir):
+
+
+
+
+def run_table(root,files_to_show,seq_order,model_order, topk, range, tag, save_dir,save_latex=True):
     
-    results,sequences,models  = load_results(root,model_key='§',seq_key='%',score_key = "@")
+    results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
     sequences = sequences.tolist()
     # print all models and sequences
     print(models)
@@ -73,14 +77,14 @@ def run_table(root,files_to_show,seq_order,model_order, topk, range, tag, save_d
     # save dataframe to csv
     table_r.to_csv(os.path.join(save_dir,f"{tag}_recall_{range}m@{topk}.csv"))
 
-    latex_table = tabulate(table_r, tablefmt="latex", headers="keys",floatfmt=".3f")
-    latex_table = latex_table.replace(" ", "")
-    
-    file = os.path.join(save_dir,f"{tag}_recall_{range}m@{topk}.tex")
-    os.makedirs(save_dir, exist_ok=True)
-    f = open(file, "w")
-    f.write(latex_table)
-    f.close()
+    if save_latex:
+        latex_table = tabulate(table_r, tablefmt="latex", headers="keys",floatfmt=".3f")
+        latex_table = latex_table.replace(" ", "")
+        file = os.path.join(save_dir,f"{tag}_recall_{range}m@{topk}.tex")
+        os.makedirs(save_dir, exist_ok=True)
+        f = open(file, "w")
+        f.write(latex_table)
+        f.close()
 
     print("\n")
     print(sequences)

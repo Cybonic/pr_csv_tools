@@ -7,76 +7,75 @@ import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from segment_table import run_table
+from utils import  load_results, find_file
 
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
+#plt.rcParams['axes.prop_cycle'] = plt.cycler(color=plt.get_cmap('Greens')(np.linspace(0, 1, 10)))
+
+sns.set_palette('colorblind')
+
 COLORS     = ["blue","gray","red", "green","orange","brown","pink","gray","olive","purple"]
-LINESTYLES = ["-","-.","--", "-.","-", "-", "-","-", "-.", "--","-", "-.", "--"]
+LINESTYLES = ["-","-.","--", ":", "-", "-","-", "-.", "--","-", "-.", "--"]
+LINESTYLES = ['*', '--', '-.', ':',  "-", "-"]
+# Define line styles and markers
+line_styles = ['-', '--', '-.']  # Line styles
+#markers = ['o', 's', '^']        # Markers
+markers = ['s', '^', 'v', 'D', 'p','o']
+
 SIZE_PARAM = 25
 LINEWIDTH  = 5
    
     
-def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
-    # all csv files in the root and its subdirectories
-    files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.endswith(".csv")]
+
+def generate_top25(results,models,sequences,files_to_show,range=10,res=3,**args):
+    """ generate top 25 data structure
     
-    sequence_pool = []
-    model_pool = []
-    matches = {}
-    for file in tqdm(files,total=len(files)):
-        file_Struct = file.split("/")
-        model_index = np.array([i for i,field in enumerate(file_Struct) if model_key in field])
+
+    Args:
+        results (_type_): _description_
+        models (_type_): _description_
+        sequences (_type_): _description_
+        files_to_show (_type_): _description_
+        range (int, optional): _description_. Defaults to 10.
+        res (int, optional): _description_. Defaults to 3.
+
+    Returns:
+        _type_: _description_
+    """
+    topk = np.arange(1,25+1,1)
+    table ={}
+    
+    for seq in sequences:
+        model_row = []
+        columns = []
         
-        # No match continue
-        if len(model_index) == 0:
-            continue 
-        
-        model_index = model_index[0]
-        seq_index = np.array([i for i,field in enumerate(file_Struct) if seq_key in field])
-        # No match continue
-        if len(seq_index) == 0:
-            continue
-        
-        seq_index = seq_index[0]
-        score_index = np.array([i for i,field in enumerate(file_Struct) if score_key in field])
-        # No match continue
-        if len(score_index) == 0:
-            continue
-        
-        # Clear name
-        # remove set of strings from the name
-        #file_Struct[seq_index] = file_Struct[seq_index].split()[-1]
+        for i,model in enumerate(models):
             
-        score_index = score_index[0]
-        
-        model_name = file_Struct[model_index]
-        seq_name = file_Struct[seq_index]
-        score_name = file_Struct[score_index]
-        
-        # Remove keys from the names
-        model_name = model_name.replace(model_key,"")
-        seq_name = seq_name.replace(seq_key,"")
-        score_name = score_name.replace(score_key,"")
-        
-        sequence_pool.append(seq_name)
-        model_pool.append(model_name)
-        # load csv
-        df = pd.read_csv(file)
-
-        if seq_name not in matches:
-            matches[seq_name] = {model_name:{score_name:[{'df':df,'path':file}]}}
-        elif model_name not in matches[seq_name]:
-            matches[seq_name][model_name] = {score_name:[{'df':df,'path':file}]}
-        elif score_name in matches[seq_name][model_name]:
-            matches[seq_name][model_name][score_name].append({'df':df,'path':file})
-        else:
-            raise ValueError(f"Error: {seq_name} {model_name} {score_name}")
-    
-    sequences = np.unique(sequence_pool)
-    models = np.unique(model_pool)
-    return matches,sequences,models
-
+            for tag,scores in  results[seq][model].items():
+                for file in files_to_show:
+                    index = find_file(scores,file)
+                    if index == -1:
+                        print(f"File {file} not found in {model} {seq}")
+                        continue
+                    
+                    dataframe_ = scores[index]['df']
+                    path = scores[index]['path']
+                    
+                    target_column = np.asarray(dataframe_[str(range)])
+                    target_cell   = target_column[topk-1]
+                    
+                    if 'new_model_names' in args:
+                        model_ = args['new_model_names'][i] # Must be in the same order as the model
+                        model = model_
+                    
+                    model_row.append(target_cell)
+                    columns.append(f"{model}")
+                    
+        table[seq] = pd.DataFrame(model_row, columns=topk, index=columns)       
+    return  table
 
 
 
@@ -190,9 +189,12 @@ def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,line
 
 
 
-def gen_top25_fig(seqs,models,dist,results,save_dir,size_param=15,linewidth=5,**args):
+def gen_top25_fig(results,save_dir,size_param=15,linewidth=5,**args):
     
     
+    marker_size = 15
+    if "marker_size" in args:
+        marker_size = args["marker_size"]
     
     show_legend = True
     if "show_legend" in args:
@@ -205,77 +207,53 @@ def gen_top25_fig(seqs,models,dist,results,save_dir,size_param=15,linewidth=5,**
              
     os.makedirs(graph_dir, exist_ok=True)
     
+    seqs = list(results.keys())
     
-    n_lines = len(models)
     
+  
     colors = None
     linestyles = None
-    if 'colors' in args:
-        # TODO: 
-        #  [] Add default color and linestyle
-        #  [] Inversion of oder is required. plotting approach overlap the line 
-        
-        # Line colors
-        colors = args['colors'][:n_lines]
-        # invert order
-        colors = colors[::-1]
-        
-        # Line styles
-        linestyles = args['linestyles'][:n_lines]
-        # invert order
-        linestyles = linestyles[::-1]
     
-            
-    ## Invert order 
-    models = models[::-1]
-    
-    top = np.arange(1,25,1)
     for seq in seqs:
-        model_array = {}        
-        for model in models:
-            recall_array = []
-            key_array = []
-            for key, value in results[seq][model].items():
-                key_array.append(key)
-                recall_table = results[seq][model][key]['df'][str(dist)]
-                recall_value = recall_table.loc[top-1]
-                recall_array.append(recall_value)
+        
+        table = results[seq]
+        
+        models = table.index.tolist()
+        
+        models = models[::-1]
+        if 'colors' in args:
+            # TODO: 
+            #  [] Add default color and linestyle
+            #  [] Inversion of oder is required. plotting approach overlap the line 
             
-            max_key_idx = np.array(key_array).argmax()
-            max_value = np.array(recall_array)[max_key_idx]
-            model_array[model] =  max_value#,'x':crop_xx_axis}
+            # Line colors
+            n_lines = len(models)
+            colors = args['colors'][:n_lines]
+            # invert order
+            colors = colors[::-1]
+            
+            # Line styles
+            linestyles = args['linestyles'][:n_lines]
+            # invert order
+            linestyles = linestyles[::-1]
+    
+    
 
-        
-        # Plot the graph
-        df = pd.DataFrame(model_array, index=top)
-        plt.figure(figsize=(10,12))
-        
-        # Original model names
-        model_names = models
-        
-        # New model names
-        if 'new_model_name' in args:
-            model_names = args['new_model_name']
-        
-        # Invert order
-        model_names = model_names[::-1]
-        
-        # New sequence name
-        if 'new_seq_name' in args:
-            seq = args['new_seq_name']
-            
+        plt.figure(figsize=(10,12))    
         if colors != None and linestyles != None:
             # Plot results for each model
             for i,model in enumerate(models):
                 if show_legend: 
-                    sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model_names[i])
+                    plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size,label=model)
+                    #sns.lineplot(data=table.loc[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model)
                 else:
-                    sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i])
+                    plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size)
+                    #sns.lineplot(data=table.loc[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i])
             
         else:
-            sns.lineplot( data=df,linewidth=linewidth)
+            sns.lineplot( data=table,linewidth=linewidth)
         
-        file = os.path.join(graph_dir,f'{seq}_range{dist}m.pdf')
+        file = os.path.join(graph_dir,f'{seq}.pdf')
         plt.xlabel('Top k',fontsize=size_param, labelpad=5)  # Set x-axis label here
         plt.ylabel('Recall@k',fontsize=size_param, labelpad=5)  # Set x-axis label here
         plt.grid()
@@ -305,57 +283,133 @@ def abstract_range_fig(sequences,models,seq_ranges,results,save_dir,new_names,sh
                       new_model_name = new_names,
                       show_legend    = show_legend_flag)
         
+
+def run_graphs(root,seq_order,model_order,**args):
     
+    
+    graph_path = args['save_dir']
+    
+    results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
+    sequences = sequences.tolist()
+    
+    
+    # print all models and sequences
+    print(models)
+    print(sequences)
+    
+    
+    seq_bool = [True for seq in seq_order if seq in sequences]
+    assert sum(seq_bool) == len(seq_order), "Sequence not found in the dataset"
+    
+    if model_order !=  None:
+        model_bool = [True for item in model_order if item in models]
+        assert sum(model_bool) == len(model_order), "Sequence not found in the dataset"
+    else:
+        model_order = models
+    
+    
+    results = generate_top25(results,model_order,seq_order,["recall.csv"],**args)
+    
+    gen_top25_fig(  results,
+                    graph_path,
+                    size_param     = 30,
+                    linewidth      = 3,
+                    marker_size    = 15,
+                    colors         = COLORS,
+                    linestyles     = LINESTYLES,
+                    show_legend    = False
+    )
+        
+        
+        
+        
+    
+        
+def main_fig(root,sequences,org_model,save_dir,new_model,ROWS,**args):
+    size_param = args['size_param']
+    topk = args['topk']
+    target_range = args['target_range']
+    
+    idx_y = [i for i,r in enumerate(new_model) if r in ROWS]
+    
+    # Global
+    # ========================================
+    files_to_show = ["recall.csv"]
+    pd_array = run_graphs(root,sequences,org_model, 
+                          range = target_range, 
+                          res = 3,
+                          tag = 'global', 
+                          save_dir = save_dir,
+                          new_model_names = new_model)
+
+  
+
+    
+
+
+
 if __name__ == "__main__":
-    root = "/home/tiago/workspace/SPCoV/predictions/iros24/"
+ 
+    root = "/home/tiago/workspace/pointnetgap-RAL/RALv2/on_paper"
+    
+    save_dir = "RALv3"
+    
+    sequences = ['SJ23','ON22','OJ23','OJ22']   
+    
+    model_order = ['PointNetGAP-LazyTripletLoss_L2_segmentlossM0.5',
+                   'PointNetGeM-LazyTripletLoss_L2-segment_loss-m0.5',
+                   'PointNetMAC-LazyTripletLoss_L2-segment_loss-m0.5',
+                   'PointNetVLAD-LazyTripletLoss_L2-segment_loss-m0.5',
+                   'LOGG3D-LazyTripletLoss_L2-segment_lossM0.1-descriptors',
+                   'overlap_transformer-LazyTripletLoss_L2-segment_loss-m0.5',
+                   ]
+    
+    
+    new_model = ['PointNetGAP','PointNetGeM','PointNetMAC','PointNetVLAD','LOGG3D','OverlapTransformer']
+    
+    ROWS = ['PointNetGAP','PointNetGeM','PointNetMAC','PointNetVLAD','LOGG3D','OverlapTransformer']
 
+    idx_y = [i for i,r in enumerate(new_model) if r in ROWS]
     
-    save_dir = "saved_graphs_paper_iros24v2"
-
-    results,sequences,models = load_results(root)
+    graph_path = os.path.join(save_dir,'graphs')
+    os.makedirs(graph_path, exist_ok=True)
     
-    print('\n'.join(models))
+    size_param = 20
+    topk = 1
+    target_range = 10 
     
-    print('\n'.join(sequences))
     
-    #sequences = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-greenhouse-e3','kitti-uk-orchards-aut22','kitti-uk-strawberry-june23']
+    main_fig(root,sequences,model_order,graph_path,new_model,ROWS,
+             size_param = size_param, 
+             topk = topk, 
+             target_range = target_range)
     
-    models = ['SPVSoAP3DSoAPlogpnfc','LOGG3D','PointNetVLAD','overlap_transformer'] # 'PointNetSPoC'
-    #sequences   = ['kitti-GEORGIA-FR-husky-orchards-10nov23-00','kitti-strawberry-june23','kitti-orchards-sum22', 'kitti-orchards-june23','kitti-orchards-aut22']# 'kitti-strawberry-june23']
     
-    new_names = ['SPVSoAP3D','LOGG3D-Net','PointNetVLAD','OverlapTransformer'] # 'PointNetSPoC'
+    
     # Create directory
     
-    range50m = list(range(1,51,1))
-    range100m = list(range(1,101,1))
-    range120m = list(range(1,120,1))
-    range60m = list(range(1,61,1))
+    #range50m = list(range(1,51,1))
+    #range100m = list(range(1,101,1))
+    #range120m = list(range(1,120,1))
+    #range60m = list(range(1,61,1))
     
-    seq_ranges = [range100m,range50m,range60m,range50m,range50m,range120m]
-    show_legend_flag = False
+    #seq_ranges = [range100m,range50m,range60m,range50m,range50m,range120m]
     
     #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,True)
     #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,False)
     
     
-    for i in [1,5,10,-1]:
-        gen_range_fig(sequences,models,i,seq_ranges,results,save_dir,
-                      size_param     = 40,
-                      linewidth      = 10,
-                      colors         = COLORS,
-                      linestyles     = LINESTYLES, 
-                      new_model_name = new_names,
-                      show_legend    = show_legend_flag,
-                      show_label     = False)
+    #for i in [1,5,10,-1]:
+    #    gen_range_fig(sequences,models,i,seq_ranges,results,save_dir,
+    #                  size_param     = 40,
+    #                  linewidth      = 10,
+    #                  colors         = COLORS,
+    #                  linestyles     = LINESTYLES, 
+    #                  new_model_name = ROWS,
+    #                  show_legend    = show_legend_flag,
+    #                  show_label     = False)
     
-    for i in [1,5,10,20,100]:
-        gen_top25_fig(sequences,models,str(i),results,save_dir,
-                      size_param     = 25,
-                      linewidth      = 10,
-                      colors         = COLORS,
-                      linestyles     = LINESTYLES,
-                      new_model_name = new_names,
-                      show_legend    = show_legend_flag)
+    
         #gen_top25_fig(sequences,baseline_models,str(i),results,baselines_dir,size_param=25,colors=colors,linestyles=linestyles, new_model_name=new_baseline_name)
         
     
