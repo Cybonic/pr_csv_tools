@@ -45,9 +45,10 @@ def generate_top25(results,models,sequences,files_to_show,range=10,res=3,**args)
     Returns:
         _type_: _description_
     """
-    topk = np.arange(1,25+1,1)
-    table ={}
+   
     
+    table ={}
+    topk = np.arange(1,25+1,1) # reset topk
     for seq in sequences:
         model_row = []
         columns = []
@@ -56,6 +57,9 @@ def generate_top25(results,models,sequences,files_to_show,range=10,res=3,**args)
             
             for tag,scores in  results[seq][model].items():
                 for file in files_to_show:
+                    
+                    
+                     
                     index = find_file(scores,file)
                     if index == -1:
                         print(f"File {file} not found in {model} {seq}")
@@ -65,8 +69,12 @@ def generate_top25(results,models,sequences,files_to_show,range=10,res=3,**args)
                     path = scores[index]['path']
                     
                     target_column = np.asarray(dataframe_[str(range)])
-                    target_cell   = target_column[topk-1]
                     
+                    #print(target_column.shape)
+                    topk =  np.arange(target_column.shape[0]) if len(target_column)< max(topk) else topk
+                    target_cell   = target_column[topk-1].astype(np.float32)
+                    #print(topk)
+                    #print(target_cell)
                     if 'new_model_names' in args:
                         model_ = args['new_model_names'][i] # Must be in the same order as the model
                         model = model_
@@ -74,6 +82,7 @@ def generate_top25(results,models,sequences,files_to_show,range=10,res=3,**args)
                     model_row.append(target_cell)
                     columns.append(f"{model}")
                     
+                    topk = np.arange(1,25+1,1,np.int32) # reset topk
         table[seq] = pd.DataFrame(model_row, columns=topk, index=columns)       
     return  table
 
@@ -284,7 +293,7 @@ def abstract_range_fig(sequences,models,seq_ranges,results,save_dir,new_names,sh
                       show_legend    = show_legend_flag)
         
 
-def run_graphs(root,seq_order,model_order,**args):
+def run_graphs(root,seq_order,model_order,show_legend,**args):
     
     
     graph_path = args['save_dir']
@@ -317,7 +326,7 @@ def run_graphs(root,seq_order,model_order,**args):
                     marker_size    = 15,
                     colors         = COLORS,
                     linestyles     = LINESTYLES,
-                    show_legend    = False
+                    show_legend    = show_legend
     )
         
         
@@ -330,6 +339,10 @@ def main_fig(root,sequences,org_model,save_dir,new_model,ROWS,**args):
     topk = args['topk']
     target_range = args['target_range']
     
+    show_legend = False
+    if 'show_legend' in args:
+        show_legend = args['show_legend']
+        
     idx_y = [i for i,r in enumerate(new_model) if r in ROWS]
     
     # Global
@@ -340,7 +353,8 @@ def main_fig(root,sequences,org_model,save_dir,new_model,ROWS,**args):
                           res = 3,
                           tag = 'global', 
                           save_dir = save_dir,
-                          new_model_names = new_model)
+                          new_model_names = new_model,
+                          show_legend = show_legend)
 
   
 
@@ -350,68 +364,59 @@ def main_fig(root,sequences,org_model,save_dir,new_model,ROWS,**args):
 
 if __name__ == "__main__":
  
-    root = "/home/tiago/workspace/pointnetgap-RAL/RALv2/on_paper"
+    root = "/home/tiago/workspace/pointnetgap-RAL/thesis/horto_predictions"
     
-    save_dir = "RALv3"
+    save_dir = "thesis_horto"
     
-    sequences = ['SJ23','ON22','OJ23','OJ22']   
+    sequences = ['00','02','05','06','08']  
     
-    model_order = ['PointNetGAP-LazyTripletLoss_L2_segmentlossM0.5',
-                   'PointNetGeM-LazyTripletLoss_L2-segment_loss-m0.5',
-                   'PointNetMAC-LazyTripletLoss_L2-segment_loss-m0.5',
-                   'PointNetVLAD-LazyTripletLoss_L2-segment_loss-m0.5',
-                   'LOGG3D-LazyTripletLoss_L2-segment_lossM0.1-descriptors',
-                   'overlap_transformer-LazyTripletLoss_L2-segment_loss-m0.5',
+    sequences = ['ON23','OJ22','OJ23','ON22','SJ23','GTJ23']
+    
+    model_order = [ 'SPVSoAP3D',
+                    'PointNetPGAPLoss',
+                    'PointNetPGAP',
+                    'PointNetVLAD', # -segment_loss-m0.5',
+                    'LOGG3D', # -segment_lossM0.1-descriptors',
+                    'overlap_transformer', #-segment_loss-m0.5',
                    ]
     
     
-    new_model = ['PointNetGAP','PointNetGeM','PointNetMAC','PointNetVLAD','LOGG3D','OverlapTransformer']
+    new_model = [#'PointNetGAP',
+                 'SPVSoAP3D',
+                 'PointNetPGAP_SLC',
+                 'PointNetPGAP',
+                 #'PointNetGeM','PointNetMAC',
+                 'PointNetVLAD',
+                 'LOGG3D',
+                 'OverlapTransformer']
     
-    ROWS = ['PointNetGAP','PointNetGeM','PointNetMAC','PointNetVLAD','LOGG3D','OverlapTransformer']
+    ROWS = [#'PointNetGAP',
+            'SPVSoAP3D',
+            'PointNetPGAP_SLC',
+            'PointNetPGAP',
+            
+            #'PointNetGeM','PointNetMAC',
+            'PointNetVLAD','LOGG3D','OverlapTransformer']
 
     idx_y = [i for i,r in enumerate(new_model) if r in ROWS]
-    
-    graph_path = os.path.join(save_dir,'graphs')
-    os.makedirs(graph_path, exist_ok=True)
     
     size_param = 20
     topk = 1
     target_range = 10 
     
     
+    graph_path = os.path.join(save_dir,'graphs',str(target_range)+'m')
+    os.makedirs(graph_path, exist_ok=True)
+    
+    
+    
     main_fig(root,sequences,model_order,graph_path,new_model,ROWS,
              size_param = size_param, 
              topk = topk, 
-             target_range = target_range)
+             target_range = target_range,
+             show_legend = True)
     
     
-    
-    # Create directory
-    
-    #range50m = list(range(1,51,1))
-    #range100m = list(range(1,101,1))
-    #range120m = list(range(1,120,1))
-    #range60m = list(range(1,61,1))
-    
-    #seq_ranges = [range100m,range50m,range60m,range50m,range50m,range120m]
-    
-    #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,True)
-    #abstract_range_fig(sequences,sota_models,seq_ranges,results,save_dir,new_names,False)
-    
-    
-    #for i in [1,5,10,-1]:
-    #    gen_range_fig(sequences,models,i,seq_ranges,results,save_dir,
-    #                  size_param     = 40,
-    #                  linewidth      = 10,
-    #                  colors         = COLORS,
-    #                  linestyles     = LINESTYLES, 
-    #                  new_model_name = ROWS,
-    #                  show_legend    = show_legend_flag,
-    #                  show_label     = False)
-    
-    
-        #gen_top25_fig(sequences,baseline_models,str(i),results,baselines_dir,size_param=25,colors=colors,linestyles=linestyles, new_model_name=new_baseline_name)
-        
     
     
 

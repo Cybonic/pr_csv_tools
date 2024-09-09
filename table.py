@@ -79,9 +79,33 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
 
 
 if __name__ == "__main__":
-    root = "/home/tiago/workspace/pointnetgap-RAL/RALv2/predictions_RALv1"
-    save_dir = "RALv2"
-    results,sequences,models  = load_results(root,model_key='§',seq_key='%',score_key = "@")
+    root = "/home/tbarros/workspace/pointnetgap-RAL/RALv3/kittiv2_predictions"
+    
+    save_dir = "RALv3_kittiv2"
+    
+    sequences = ['00','02','05','06','08']   
+    
+    model_order = [ 'PointNetPGAP',
+                    'PointNetPGAPLoss',
+                    'PointNetVLAD', # -segment_loss-m0.5',
+                    'LOGG3D', # -segment_lossM0.1-descriptors',
+                    'overlap_transformer', #-segment_loss-m0.5',
+                   ]
+    
+    
+    new_model = [#'PointNetGAP',
+                 'PointNetPGAP',
+                 'PointNetPGAP_SCL',
+                 #'PointNetGeM','PointNetMAC',
+                 'PointNetVLAD','LOGG3D','OverlapTransformer']
+    
+    ROWS = [#'PointNetGAP',
+            'PointNetPGAP',
+            'PointNetPGAP_SCL',
+            #'PointNetGeM','PointNetMAC',
+            'PointNetVLAD','LOGG3D','OverlapTransformer']
+    
+    results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
     #models =  list(results.keys())
     print(models)
     sequences = sequences.tolist()
