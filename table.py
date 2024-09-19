@@ -79,11 +79,13 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
 
 
 if __name__ == "__main__":
-    root = "/home/tbarros/workspace/pointnetgap-RAL/RALv3/kittiv2_predictions"
+    root = "/home/tbarros/workspace/pointnetgap-RAL/thesis/horto_predictions"
     
-    save_dir = "RALv3_kittiv2"
+    save_dir = "thesis"
     
     sequences = ['00','02','05','06','08']   
+    
+    sequences = ['ON23','OJ22','OJ23','ON22','SJ23','GTJ23']
     
     model_order = [ 'PointNetPGAP',
                     'PointNetPGAPLoss',

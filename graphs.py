@@ -312,7 +312,7 @@ def run_graphs(root,seq_order,model_order,show_legend,**args):
     
     if model_order !=  None:
         model_bool = [True for item in model_order if item in models]
-        assert sum(model_bool) == len(model_order), "Sequence not found in the dataset"
+        assert sum(model_bool) == len(model_order), "Model not found in the dataset"
     else:
         model_order = models
     
@@ -366,13 +366,14 @@ if __name__ == "__main__":
  
     root = "/home/tiago/workspace/pointnetgap-RAL/thesis/horto_predictions"
     
-    save_dir = "thesis_horto"
+    save_dir = "thesis"
     
     sequences = ['00','02','05','06','08']  
     
     sequences = ['ON23','OJ22','OJ23','ON22','SJ23','GTJ23']
     
-    model_order = [ 'SPVSoAP3D',
+    model_order = ['SPVSoAP3DLoss', 
+                   'SPVSoAP3D',
                     'PointNetPGAPLoss',
                     'PointNetPGAP',
                     'PointNetVLAD', # -segment_loss-m0.5',
@@ -381,7 +382,7 @@ if __name__ == "__main__":
                    ]
     
     
-    new_model = [#'PointNetGAP',
+    new_model = ['SPVSoAP3D_SLC',
                  'SPVSoAP3D',
                  'PointNetPGAP_SLC',
                  'PointNetPGAP',
@@ -390,11 +391,10 @@ if __name__ == "__main__":
                  'LOGG3D',
                  'OverlapTransformer']
     
-    ROWS = [#'PointNetGAP',
+    ROWS = ['SPVSoAP3D_SLC',
             'SPVSoAP3D',
             'PointNetPGAP_SLC',
             'PointNetPGAP',
-            
             #'PointNetGeM','PointNetMAC',
             'PointNetVLAD','LOGG3D','OverlapTransformer']
 
@@ -414,7 +414,7 @@ if __name__ == "__main__":
              size_param = size_param, 
              topk = topk, 
              target_range = target_range,
-             show_legend = True)
+             show_legend = False)
     
     
     

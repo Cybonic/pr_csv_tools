@@ -3,12 +3,44 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-def find_file(data_struct:list,file:str):
-    for i,score in enumerate(data_struct):
-        if score['path'].endswith(file):
-            return i
-    return -1
+#def find_file(data_struct:list,file:str):
+#    for i,score in enumerate(data_struct):
+#        if score['path'].endswith(file) or  file in score['path']:
+#            return i
+#    return -1
 
+
+def find_file(data_struct:list,tags:list):
+    
+   
+    elem_of_interest = []
+    for i,score in enumerate(data_struct):
+        if find_tags_in_str(score['path'],tags,'and'):
+            elem_of_interest.append(i)
+        #if score['path'].endswith(file) or  file in score['path']:
+            #return i
+    return elem_of_interest
+
+def find_tags_in_str(string:str,tags:list,op:str):
+    """ Finds tags (ie small str) in a bigger str. 
+    The final decision can be based on "logic OR" or "logic AND". 
+    Inputs:
+        string (str): string to search in 
+        tags(list): list of tags e.g. ['tag1','tag2']
+        op (str): operator to make the final decision (or, and).
+    Output:
+        (0,1) (int)
+    """
+    tags_found = np.array([1 if tag in string else 0 for tag in tags ])
+    decision = 0 
+    if op == 'or':
+        decision = 1 if tags_found.sum()>0 else 0
+    elif op=='and':
+        decision = tags_found.prod()
+    else:
+        raise NameError("Logic operator does not exist: " + op )
+        
+    return decision.__bool__()
 
 def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
     # all csv files in the root and its subdirectories
