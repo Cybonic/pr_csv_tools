@@ -92,27 +92,50 @@ def main_heatmap(root,sequences,model_order,heatmap_path,new_model,ROWS,**args):
 
 
 if __name__ == "__main__":
-    root = "/home/tiago/workspace/pointnetgap-RAL/thesis/horto_predictions"
-    save_dir = "thesis"
+    root = "/home/tiago/workspace/pointnetgap-RAL/thesis/Thesis_full_add_results"
+    save_dir = "thesis_full_n23_val"
     
     sequences = ['ON23','OJ22','OJ23','ON22','SJ23','GTJ23']
     
-    model_order = [ 'SPVSoAP3DLoss',
-                    'SPVSoAP3D',
-                    'PointNetPGAPLoss',
-                    'PointNetPGAP',
+    model_order = [ 'PointNetGeM',
+                    'PointNetMAC',
                     'PointNetVLAD',
-                    'LOGG3D',
-                    'overlap_transformer',
+                    'ResNet50GeM',
+                    'ResNet50MAC',
+                    'ResNet50VLAD',
+                    'SPVGeM',
+                    'SPVMAC',
+                    'SPVVLAD',
+                    'SPVSoAP3D'
                    ]
     
-    new_model = ['SPVSoAP3D_SLC','SPVSoAP3D','PointNetGAP_SLC','PointNetGAP','PointNetVLAD','LOGG3D','OverlapTransformer']
+    new_model = [ 'PointNetGeM',
+                    'PointNetMAC',
+                    'PointNetVLAD',
+                    'ResNet50GeM',
+                    'ResNet50MAC',
+                    'ResNet50VLAD',
+                    'SPVGeM',
+                    'SPVMAC',
+                    'SPVVLAD',
+                    'SPVSoAP3D'
+                   ]
     
-    ROWS = ['SPVSoAP3D_SLC','SPVSoAP3D','PointNetGAP_SLC','PointNetGAP','PointNetVLAD','LOGG3D','OverlapTransformer']
+    ROWS = [        #'PointNetGeM',
+                    'PointNetMAC',
+                    #'PointNetVLAD',
+                    #'ResNet50GeM',
+                    'ResNet50MAC',
+                    #'ResNet50VLAD',
+                    #'SPVGeM',
+                    'SPVMAC',
+                    #'SPVVLAD',
+                    #'SPVSoAP3D'
+                   ]
     
     
 
-    heatmap_path = os.path.join(save_dir,'heatmaps')
+    heatmap_path = os.path.join(save_dir,'heatmaps_mac')
     os.makedirs(heatmap_path, exist_ok=True)
     
     size_param = 20

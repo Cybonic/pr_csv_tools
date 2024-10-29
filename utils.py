@@ -3,11 +3,11 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-#def find_file(data_struct:list,file:str):
-#    for i,score in enumerate(data_struct):
-#        if score['path'].endswith(file) or  file in score['path']:
-#            return i
-#    return -1
+def find_file_old(data_struct:list,file:str):
+    for i,score in enumerate(data_struct):
+        if score['path'].endswith(file) or  file in score['path']:
+            return i
+    return -1
 
 
 def find_file(data_struct:list,tags:list):

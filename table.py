@@ -81,7 +81,7 @@ def generate_table(table,rows,columns,ranges,k_cand,res=3):
 if __name__ == "__main__":
     root = "/home/tbarros/workspace/pointnetgap-RAL/thesis/horto_predictions"
     
-    save_dir = "thesis"
+    save_dir = "thesis_v1"
     
     sequences = ['00','02','05','06','08']   
     

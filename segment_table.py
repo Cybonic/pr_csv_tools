@@ -127,8 +127,7 @@ if __name__ == "__main__":
     #root = "/home/tiago/workspace/pointnetgap-RAL/RALv2/predictions_RALv1"
     root = "/home/tiago/workspace/pointnetgap-RAL/thesis/horto_predictions"
     
-    save_dir = "thesis"
-    sequences = ['SJ23','ON22','OJ23','OJ22']
+    save_dir = "thesis_soap"
     sequences = ['ON23','OJ22','OJ23','ON22','SJ23','GTJ23']
      
     topk = 1
