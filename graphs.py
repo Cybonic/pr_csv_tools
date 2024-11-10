@@ -68,18 +68,26 @@ def generate_top25(results,models,sequences,files_to_show,range=10,res=3,**args)
                     dataframe_ = scores[index]['df']
                     path = scores[index]['path']
                     
-                    target_column = np.asarray(dataframe_[str(range)])
+                    range_lookup = np.array(dataframe_.columns) # -> column direction (str)
+                    topk_lookup  = np.array(dataframe_.index) # -> row direction
+                
+                    range_idx = np.array([i for i,value in enumerate(range_lookup) if not ' ' in value and int(value) == range])[0].item()
+                    topk_idx = np.array([i for i,value in enumerate(topk_lookup) for t in topk if int(value) == t-1])#[0].item()
+                
+                    recall_value = np.asarray(dataframe_)[topk_idx,range_idx]
+                
+                    #target_column = np.asarray(dataframe_[str(range)])
                     
                     #print(target_column.shape)
-                    topk =  np.arange(target_column.shape[0]) if len(target_column)< max(topk) else topk
-                    target_cell   = target_column[topk-1].astype(np.float32)
+                    #topk =  np.arange(target_column.shape[0]) if len(target_column)< max(topk) else topk
+                    #target_cell   = target_column[topk-1].astype(np.float32)
                     #print(topk)
                     #print(target_cell)
                     if 'new_model_names' in args:
                         model_ = args['new_model_names'][i] # Must be in the same order as the model
                         model = model_
                     
-                    model_row.append(target_cell)
+                    model_row.append(recall_value)
                     columns.append(f"{model}")
                     
                     topk = np.arange(1,25+1,1,np.int32) # reset topk
@@ -124,134 +132,32 @@ def generate_range(results,models,sequences,files_to_show,seq_ranges,topk=10,res
                     dataframe_ = scores[index]['df']
                     path = scores[index]['path']
                     
-                    target_column = np.asarray(dataframe_)[topk-1,1:]#[str(range)]) [0] -> top k value
+                    #target_column = np.asarray(dataframe_)[topk-1,1:]#[str(range)]) [0] -> top k value
+                    
+                    range_lookup = np.array(dataframe_.columns) # -> column direction (str)
+                    topk_lookup  = np.array(dataframe_.index) # -> row direction
+                
+                    range_idx = np.array([i for i,value in enumerate(range_lookup) for r in ranges if not ' ' in value and int(value) == r])#[0].item()
+                    topk_idx = np.array([i for i,value in enumerate(topk_lookup)  if int(value) == topk-1])[0].item()
+                
+                    recall_value = np.asarray(dataframe_)[topk_idx,range_idx]
                     
                     #print(target_column.shape)
                     #topk =  np.arange(target_column.shape[0]) if len(target_column)< max(topk) else topk
-                    target_cell   = target_column[ranges].astype(np.float32)
+                    #target_cell   = target_column[ranges].astype(np.float32)
                     #print(topk)
                     #print(target_cell)
                     if 'new_model_names' in args:
                         model_ = args['new_model_names'][i] # Must be in the same order as the model
                         model = model_
                     
-                    model_row.append(target_cell)
+                    model_row.append(recall_value)
                     columns.append(f"{model}")
                     
                     #topk = np.arange(1,25+1,1,np.int32) # reset topk
         table[seq] = pd.DataFrame(model_row, columns=ranges, index=columns)       
     return  table
 
-
-
-def gen_range_fig(seqs,models,top,seq_ranges,results,save_dir,size_param=15,linewidth=5, show_label = True, **args):
-    
-    show_label = show_label
-    show_legend = True
-    if 'show_legend' in args:
-        show_legend = args['show_legend']
-    
-    if show_legend:
-        graph_dir = os.path.join(save_dir,"w_label")
-    else:
-        graph_dir = os.path.join(save_dir,"no_label")
-        
-    os.makedirs(graph_dir, exist_ok=True)
-    
-    
-    models = models[::-1]   
-    n_lines = len(models)
-    
-    colors = None
-    linestyles = None
-    if 'colors' in args:
-        # TODO: 
-        #  [] Add default color and linestyle
-        #  [] Inversion of oder is required. plotting approach overlap the line 
-        
-        # Line colors
-        colors = args['colors'][:n_lines]
-        # invert order
-        colors = colors[::-1]
-        
-        # Line styles
-        linestyles = args['linestyles'][:n_lines]
-        # invert order
-        linestyles = linestyles[::-1]
-        
-        
-        
-    for seq in seqs:
-        model_array = {}
-        
-        ranges = np.arange(1,seq_ranges[seq],1)
-        for model in models:
-            array = []
-  
-            for dist in ranges:
-                recall_array = []
-                for key, value in results[seq][model].items():
-                    recall_table = np.array(results[seq][model][key]['df'][dist])
-
-                    recall_value = recall_table[top-1]
-                    recall_array.append(recall_value)
-                    
-                max_value = np.array(recall_array).max() # When There are more than one prediction, get the max
-                array.append(max_value)
-
-            model_array[model] =  array#,'x':crop_xx_axis}
-    
-        df = pd.DataFrame(model_array, index=np.array(ranges))
-        plt.figure(figsize=(10,12))
-
-        model_names = models
-        if 'new_model_name' in args:
-            model_names = args['new_model_name']
-        
-        model_names = model_names[::-1]
-        
-        if 'new_seq_name' in args:
-            seq = args['new_seq_name']
-            
-        if colors != None and linestyles != None:
-
-            for i,model in enumerate(models):
-                values = np.array(df[model].values)
-                index = np.array(df[model].index)
-                
-                if show_legend:
-                    sns.lineplot(x=index, y=values,linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model_names[i])
-                else:
-                    sns.lineplot(data=df[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i])
-        else:
-            sns.lineplot(data=df,linewidth=linewidth)
-
-      
-        str_top_graph = str(top)
-        str_top_pdf   = str(top)
-            
-        if top == -1:
-            str_top_graph = '1%'
-            str_top_pdf = '1p'
-                   
-        file = os.path.join(graph_dir,f'{seq}-Top{str_top_pdf}.pdf')
-        
-        if show_label:
-            plt.xlabel('Range[m]',fontsize=size_param, labelpad=5)  # Set x-axis label here
-            plt.ylabel(f'Recall@{str_top_graph}',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        
-        plt.tick_params(axis='y', labelsize=size_param) 
-        plt.tick_params(axis='x', labelsize=size_param)
-        # turn on grid  
-        plt.ylim(0, 1)
-        plt.xlim(0, max(ranges))
-        plt.grid()
-        
-        if show_legend:
-            plt.legend(fontsize=size_param)
-        #plt.legend(fontsize=size_param)
-        plt.savefig(file, transparent=True)
-        print(f"Saved {file}")
 
 
 
@@ -283,7 +189,7 @@ def run_range_graphs(root,seq_order,model_order,**args):
     if 'show_legend' in args:
         show_legend = args['show_legend']
         
-    for top_k in [1,5,10,-1]:
+    for top_k in [1,5,10]:
         
         curr_graph_path = os.path.join(graph_path,f'top{top_k}_range')
         os.makedirs(curr_graph_path, exist_ok=True)
@@ -338,35 +244,15 @@ def gen_range_fig(results,save_dir,size_param=15,linewidth=5,**args):
         models = table.index.tolist()
         
         models = models[::-1]
-        if 'colors' in args:
-            # TODO: 
-            #  [] Add default color and linestyle
-            #  [] Inversion of oder is required. plotting approach overlap the line 
-            
-            # Line colors
-            n_lines = len(models)
-            colors = args['colors'][:n_lines]
-            # invert order
-            colors = colors[::-1]
-            
-            # Line styles
-            linestyles = args['linestyles'][:n_lines]
-            # invert order
-            linestyles = linestyles[::-1]
+    
 
         plt.figure(figsize=(10,12))    
-        if colors != None and linestyles != None:
-            # Plot results for each model
-            for i,model in enumerate(models):
-                if show_legend: 
-                    plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size,label=model)
-                    #sns.lineplot(data=table.loc[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model)
-                else:
-                    plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size)
-                    #sns.lineplot(data=table.loc[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i])
-            
-        else:
-            sns.lineplot( data=table,linewidth=linewidth)
+        # Plot results for each model
+        for i,model in enumerate(models):
+            if show_legend: 
+                plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size,label=model)
+            else:
+                plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size)
         
         file = os.path.join(graph_dir,f'{seq}.pdf')
         plt.xlabel('Range [m]',fontsize=size_param, labelpad=5)  # Set x-axis label here
@@ -489,7 +375,8 @@ def run_top25_graphs(root,seq_order,model_order,show_legend,**args):
     
     results = generate_top25(results,model_order,seq_order,["recall.csv"],**args)
     
-    print(f"***** SAVING TO {graph_path}")
+    print(f"***** SAVING TO {graph_path}***********")
+    
     gen_top25_fig(  results,
                     graph_path,
                     size_param     = 30,
@@ -534,7 +421,7 @@ if __name__ == "__main__":
  
     root = "/home/tiago/workspace/pointnetgap-RAL/thesis/horto_predictions"
     
-    save_dir = "thesis_horto"
+    save_dir = "thesis_hortov2"
     
     # sequences = ['00','02','05','06','08']  
     
@@ -595,7 +482,7 @@ if __name__ == "__main__":
     target_range = 10 
     
     
-    top25 = False
+    top25 = True
     if top25:
         
         graph_path = os.path.join(save_dir,'graphs_top25',str(target_range)+'m')
