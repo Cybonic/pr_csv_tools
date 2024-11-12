@@ -136,7 +136,7 @@ def parse_results(dir,foi, **input_keys):
 
 
 def generate_density_seq_mean(results,models,sequences,topk=10,range=10,res=3,**args):
-    """ generate top 25 data structure
+    """ generate recall-point density graph
     
 
     Args:
@@ -150,12 +150,6 @@ def generate_density_seq_mean(results,models,sequences,topk=10,range=10,res=3,**
     Returns:
         _type_: _description_
     """
-    
-    
-    key_structure = ['model','density','seq','score']
-    
-    if 'key_structure' in args:
-        key_structure = args['key_structure']
    
    
     new_model_names = models
@@ -174,7 +168,7 @@ def generate_density_seq_mean(results,models,sequences,topk=10,range=10,res=3,**
     # The issue is here ! The for cycle assumes a determined structure, it does not allow
     # for a new data structure
     #
-    # 1) Need to split it on levels not on specific keys
+    # 1) Need to split it in levels, not based on specific keys
     # 
     #*****************************
     
@@ -494,28 +488,35 @@ class plot_graph():
 def run_graphs_density(root,seq_order,model_order, 
                         topk,
                         target_range,  
-                       show_legend,**args):
+                        show_legend,**args):
     
     
     #graph_path = args['save_dir']
     # The order defines the structure
-    keys = {'model':-5,'density':-6,'seq':'eval-','score':'@'}
+    keys = {'model':-5,'density':-6,'seq':'eval-','score':'@'} # keys to identify specific target folders
     results,elem_array = parse_results(root,'recall.csv',**keys)
     
-    
-    #results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
     sequences = elem_array['seq'].tolist()
     models =  elem_array['model'].tolist()
     
-    #models = [model.split('-')[0] for model in models]
     # print all models and sequences
-    print(models)
-    print(sequences)
+    print("\n")
+    print("*"*50)
+    print("Found the following models:")
+    for m in models:
+        print("-> " + m)
+        
+    print("\nFound the following sequences:")
+    for s in sequences:
+        print("-> " + s)
+    print("*"*50)
+    print("\n")
     
-    
+    # Check if selected sequences were found
     seq_bool = [True for seq in seq_order if seq in sequences]
     assert sum(seq_bool) == len(seq_order), "Sequence not found in the dataset"
     
+    # Check if selected models were found
     if model_order !=  None:
         model_bool = []
         for item in model_order:
@@ -527,38 +528,38 @@ def run_graphs_density(root,seq_order,model_order,
         model_order = models
     
     
-    method = 1
+    method = 1 # <- This should be at the top level 
+    
     
     if method == 1:
-    
+        # creates a fig for each model averaging over the sequences 
+        # creates a fig with all models averaging over all/selected sequences
         results = generate_density_seq_mean(results,model_order,seq_order,
                                 topk,
                                 target_range,
-                                #save_dir = graph_path,
-                                    size_param     = 30,
-                                    linewidth      = 3,
-                                    marker_size    = 15,
-                                    colors         = COLORS,
-                                    linestyles     = LINESTYLES,
-                                    show_legend    = show_legend,
-                                    key_structure  = list(keys.keys()),
-                                    **args)
+                                size_param     = 30,
+                                linewidth      = 3,
+                                marker_size    = 15,
+                                colors         = COLORS,
+                                linestyles     = LINESTYLES,
+                                show_legend    = show_legend,
+                                key_structure  = list(keys.keys()),
+                                **args)
     
     
     elif method ==2 :
-        # create  a figure for each sequence
+        # create a figure for each sequence
         results = generate_density(results,model_order,seq_order,
                                 topk,
                                 target_range,
-                                #save_dir = graph_path,
-                                    size_param     = 30,
-                                    linewidth      = 3,
-                                    marker_size    = 15,
-                                    colors         = COLORS,
-                                    linestyles     = LINESTYLES,
-                                    show_legend    = show_legend,
-                                    key_structure  = list(keys.keys()),
-                                    **args)
+                                size_param     = 30,
+                                linewidth      = 3,
+                                marker_size    = 15,
+                                colors         = COLORS,
+                                linestyles     = LINESTYLES,
+                                show_legend    = show_legend,
+                                key_structure  = list(keys.keys()),
+                                **args)
         
     else:
         raise ValueError
@@ -567,6 +568,7 @@ def run_graphs_density(root,seq_order,model_order,
 
 
 def main_fig(root,sequences,org_model,save_dir,new_model,**args):
+    
     size_param = args['size_param']
     topk = args['topk']
     target_range = args['target_range']
@@ -575,9 +577,6 @@ def main_fig(root,sequences,org_model,save_dir,new_model,**args):
     if 'show_legend' in args:
         show_legend = args['show_legend']
     
-    # Global
-    # ========================================
-    files_to_show = ["recall.csv"]
     pd_array = run_graphs_density(root,sequences,org_model, 
                                     topk = topk,
                                     target_range = target_range, 
@@ -641,7 +640,6 @@ if __name__ == "__main__":
     
     graph_path = os.path.join(save_dir,'graphs',str(target_range)+'m')
     os.makedirs(graph_path, exist_ok=True)
-    
     
     
     main_fig(root,sequences,model_order,graph_path,new_model,
