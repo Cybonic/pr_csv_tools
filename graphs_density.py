@@ -195,6 +195,7 @@ def generate_density_seq_mean(results,models,sequences,topk=10,range=10,res=3,**
     yyplot = {'mean':[],'std':[]}
         
     model_set = []
+    # Model Level
     for model,next_value in  results.items():#  [seq][model].items():
         
         xx = []
@@ -204,12 +205,20 @@ def generate_density_seq_mean(results,models,sequences,topk=10,range=10,res=3,**
         idx = np.array([i for i,m in enumerate(models) if model.startswith(m)])
         if len(idx) == 0:
             continue 
-        # density 
+        # Density Level
         for density, dens_value in next_value.items():
             
             x = []
-            y = []    
+            y = []
+            
+            # Sequence Level
             for seq, seq_value in dens_value.items():
+                
+                if len(sequences) > 0 and not seq in sequences: # 
+                    # if 'sequences' is empty use everything 
+                    # otherwise use only those sequences provided in 'sequences'
+                    continue
+                
                 for d_tag, score_value in seq_value.items():
                     
                     v =  np.asarray(list(score_value))[0]['df']
@@ -588,11 +597,11 @@ if __name__ == "__main__":
  
     root = "/home/tiago/workspace/pointnetgap-RAL/thesis/Thesis_density"
     
-    save_dir = "thesis_density"
+    save_dir = "thesis_density_selected_seq"
     
     # sequences = ['00','02','05','06','08']  
     
-    sequences = ['OJ23']#'ON23','OJ23','ON22','SJ23','GTJ23']
+    sequences = ['OJ23','ON23']#'ON23','OJ23','ON22','SJ23','GTJ23']
     
     model_order = [ #'PointNetGeM',
                     #'PointNetMAC',
