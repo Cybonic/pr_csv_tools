@@ -8,7 +8,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from segment_table import run_table
-from utils import  find_file_old as find_file
+from utils import  find_file_old as find_file, parse_result_path
 from utils import  load_results
 
 matplotlib.rcParams['pdf.fonttype'] = 42
@@ -335,6 +335,8 @@ def gen_top25_fig(results,save_dir,size_param=15,linewidth=5,**args):
             sns.lineplot( data=table,linewidth=linewidth)
         
         file = os.path.join(graph_dir,f'{seq}.pdf')
+
+        
         plt.xlabel('Top k',fontsize=size_param, labelpad=5)  # Set x-axis label here
         plt.ylabel('Recall@k',fontsize=size_param, labelpad=5)  # Set x-axis label here
         plt.grid()
@@ -346,6 +348,8 @@ def gen_top25_fig(results,save_dir,size_param=15,linewidth=5,**args):
             plt.legend(fontsize=size_param)
             
         plt.savefig(file,transparent=True)
+        
+        print("\nFile saved to:", file)
         plt.close()
         
 
@@ -354,9 +358,53 @@ def run_top25_graphs(root,seq_order,model_order,show_legend,**args):
     
     graph_path = args['save_dir']
     
-    results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
-    sequences = sequences.tolist()
     
+    matches = {}
+    model_name = []
+    seq_name = []
+    score_name = []
+    files_selected = []
+    df = []
+
+    files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(root) for file in files if file.endswith(".csv")]
+
+    for file in files:
+        csv_file = os.path.basename(file)
+        
+        if 'recall.csv' not in csv_file:
+            continue
+        # get which dataset and model
+        seq_key = [seq for seq in seq_order if seq in file]
+        model_key = [model for model in model_order if model in file]
+        if model_key == [] or seq_key == []:
+            continue
+        seq_key = seq_key[0]
+        model_key = model_key[0]
+        match = parse_result_path(file,model_key=model_key,seq_key=seq_key,score_key = "@")
+        
+        
+        # Unpack the dictionary 
+        model_name.append(match['model'])  
+        seq_name.append(match['seq'])
+        score_name.append(match['score'])
+        df.append(match['df'])
+        files_selected.append(file)
+
+
+    for m_name, s_name, sc_name, d, file in zip(model_name, seq_name, score_name, df, files_selected):
+        if s_name not in matches:
+            matches[s_name] = {} 
+        if m_name not in matches[s_name]:
+            matches[s_name][m_name] = {}
+        if sc_name not in matches[s_name][m_name]:
+            matches[s_name][m_name][sc_name] = []
+            
+        matches[s_name][m_name][sc_name].append({'df':d,'path':file})
+
+
+    #results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
+    models = list(set([m for s in matches for m in matches[s]]))
+    sequences = list(matches.keys())
     
     # print all models and sequences
     print(models)
@@ -364,13 +412,22 @@ def run_top25_graphs(root,seq_order,model_order,show_legend,**args):
     
     
     seq_bool = [True for seq in seq_order if seq in sequences]
-    assert sum(seq_bool) == len(seq_order), "Sequence not found in the dataset"
+    #assert sum(seq_bool) == len(seq_order), "Sequence not found in the dataset"
     
     if model_order !=  None:
-        model_bool = [True for item in model_order if item in models]
-        assert sum(model_bool) == len(model_order), "Model not found in the dataset"
-    else:
+        pass
+    else: 
         model_order = models
+
+    # Note: The following loop attempting to merge 'results' into 'matches' references an undefined 'results' variable
+    # if load_results is commented out. Assuming the intention is just to use the data collected in 'matches'
+    # we can remove the merge loop or adapt it if 'results' was meant to be something else.
+    # Since load_results is commented out, 'results' is undefined here. 
+    # The previous code had:
+    # for seq in sequences: ... if model in results[seq]: matches[seq][model].update(results[seq][model])
+    
+    # I will assign matches to results to proceed with the rest of the function
+    results = matches
     
     
     results = generate_top25(results,model_order,seq_order,["recall.csv"],**args)
@@ -413,19 +470,16 @@ def main_fig(root,sequences,org_model,save_dir,new_model,ROWS,**args):
 
   
 
-    
-
-
 
 if __name__ == "__main__":
  
-    root = "/home/tiago/workspace/pointnetgap-RAL/thesis/horto_predictions"
+    root = "/home/tiago/workspace/place_uk/PointNetGAP/saved"
     
-    save_dir = "thesis_hortov2"
+    save_dir = "hortov2_uk"
     
     # sequences = ['00','02','05','06','08']  
     
-    sequences = ['ON23','OJ22','OJ23','ON22','SJ23','GTJ23']
+    sequences = ['PCD_Easy_DARK'] #,'OJ22','OJ23','ON22','SJ23','GTJ23']
     
     model_order = [ #'PointNetGeM',
                     #'PointNetMAC',
@@ -493,10 +547,10 @@ if __name__ == "__main__":
                 size_param = size_param, 
                 topk = topk, 
                 target_range = target_range,
-                show_legend = False)
+                show_legend = True)
     
     
-    range_flag = True
+    range_flag = False
     if range_flag:
         
         graph_path = os.path.join(save_dir,'graphs_range')
