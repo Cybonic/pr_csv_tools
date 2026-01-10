@@ -43,6 +43,55 @@ def find_tags_in_str(string:str,tags:list,op:str):
     return decision.__bool__()
 
 
+def parse_result_path(file,model_key='L2',seq_key='eval-',score_key = "@"):
+
+    assert isinstance(file, str), "File path must be a string"
+    assert os.path.exists(file), f"File does not exist: {file}"
+
+    output={}
+    file_Struct = file.split("/")
+    model_index = np.array([i for i,field in enumerate(file_Struct) if field.startswith(model_key)])
+    
+    # No match continue
+    if len(model_index) == 0:
+        return output
+    
+    model_index = model_index[0]
+    seq_index = np.array([i for i,field in enumerate(file_Struct) if field.startswith(seq_key)])
+    # No match continue
+    if len(seq_index) == 0:
+        return output
+
+    seq_index = seq_index[0]
+    score_index = np.array([i for i,field in enumerate(file_Struct) if score_key in field ])
+    # No match continue
+    if len(score_index) == 0:
+        return output
+    
+    # Clear name
+    # remove set of strings from the name
+    file_Struct[model_index] = file_Struct[model_index].split('-')[0]
+    file_Struct[seq_index] = file_Struct[seq_index].split()[0]
+        
+    score_index = score_index[0]
+    
+    model_name = file_Struct[model_index]
+    seq_name = file_Struct[seq_index]
+    score_name = file_Struct[score_index]
+    
+    
+    # Remove keys from the names
+    #model_name = model_name.replace(model_key,"")
+    #seq_name = seq_name.replace(seq_key,"")
+    score_name = score_name.replace(score_key,"")
+    
+    # load csv
+    df = pd.read_csv(file)
+
+    #output[seq_name] = {model_name:{score_name:[{'df':df,'path':file}]}}
+    return {'model':model_name,'seq':seq_name,'score':score_name,'df':df}
+
+
 def load_results(dir,model_key='L2',seq_key='eval-',score_key = "@"):
     # all csv files in the root and its subdirectories
     """_summary_
