@@ -14,6 +14,75 @@ from utils import  load_results
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
+
+def save_legend_separately(fig, ax, filename, fontsize=None, ncol=None, **legend_kwargs):
+    """
+    Save the legend of a plot as a separate PDF file with horizontal alignment.
+    
+    Args:
+        fig: Matplotlib figure object
+        ax: Matplotlib axis object
+        filename: Path to save the legend PDF (without .pdf extension)
+        fontsize: Font size for legend text
+        ncol: Number of columns for horizontal alignment (auto-calculated if None)
+        **legend_kwargs: Additional keyword arguments to pass to ax.legend()
+    
+    Returns:
+        Path to the saved legend file
+    """
+    # Get the legend from the axis or create one if it doesn't exist
+    legend = ax.get_legend()
+    
+    if legend is None:
+        # Try to get handles and labels directly
+        handles, labels = ax.get_legend_handles_labels()
+        if len(handles) == 0:
+            print(f"Warning: No legend data found for {filename}")
+            return None
+    else:
+        handles, labels = ax.get_legend_handles_labels()
+    
+    # Auto-calculate number of columns for horizontal alignment
+    if ncol is None:
+        ncol = len(labels)  # All items in one row
+    
+    # Create a new figure for the legend only
+    fig_legend = plt.figure(figsize=(10, 2))  # Wide figure for horizontal legend
+    ax_legend = fig_legend.add_subplot(111)
+    
+    # Hide the axis
+    ax_legend.axis('off')
+    
+    # Create legend in new figure with horizontal alignment
+    if fontsize is not None:
+        legend_kwargs['fontsize'] = fontsize
+    
+    # Add legend to the new figure with horizontal alignment (transparent, no frame)
+    legend_new = ax_legend.legend(handles, labels, 
+                                  loc='center', 
+                                  frameon=False,  # No frame/contour
+                                  ncol=ncol,  # Horizontal alignment
+                                  **legend_kwargs)
+    
+    # Get the legend's bounding box in figure coordinates
+    fig_legend.canvas.draw()
+    bbox = legend_new.get_window_extent().transformed(fig_legend.dpi_scale_trans.inverted())
+    
+    # Add some padding
+    padding = 0.1
+    bbox_expanded = bbox.expanded(1.0 + padding, 1.0 + padding)
+    
+    # Save with tight bounding box
+    legend_file = f"{filename}_legend.pdf"
+    fig_legend.savefig(legend_file, 
+                      bbox_inches=bbox_expanded,
+                      transparent=True,
+                      dpi=300)
+    plt.close(fig_legend)
+    
+    print(f"Legend saved to: {legend_file}")
+    return legend_file
+
 #plt.rcParams['axes.prop_cycle'] = plt.cycler(color=plt.get_cmap('Greens')(np.linspace(0, 1, 10)))
 
 sns.set_palette('colorblind')
@@ -147,8 +216,8 @@ def generate_range(results,models,sequences,files_to_show,seq_ranges,topk=10,res
                     #target_cell   = target_column[ranges].astype(np.float32)
                     #print(topk)
                     #print(target_cell)
-                    if 'new_model_names' in args:
-                        model_ = args['new_model_names'][i] # Must be in the same order as the model
+                    if 'new_model' in args:
+                        model_ = args['new_model'][i] # Must be in the same order as the model
                         model = model_
                     
                     model_row.append(recall_value)
@@ -163,12 +232,14 @@ def generate_range(results,models,sequences,files_to_show,seq_ranges,topk=10,res
 
 def run_range_graphs(root,seq_order,model_order,**args):
     
-    seq_ranges = {'OJ22':120,'GTJ23':120,'ON23':120,'OJ23':120,'ON22':120,'SJ23':120}
-    
+    #seq_ranges = {'OJ22':120,'GTJ23':120,'ON23':120,'OJ23':120,'ON22':120,'SJ23':120}
+
+    seq_ranges = {seq: 120 for seq in seq_order}
     graph_path = args['save_dir']
     
-    results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
-    sequences = sequences.tolist()
+    results,sequences,models = run_top25_graphs(root,seq_order,model_order,**args)
+    #results,sequences,models  = load_results(root,model_key='#',seq_key='eval-',score_key = "@")
+    #sequences = sequences.tolist()
     
     
     # print all models and sequences
@@ -193,6 +264,7 @@ def run_range_graphs(root,seq_order,model_order,**args):
         
         curr_graph_path = os.path.join(graph_path,f'top{top_k}_range')
         os.makedirs(curr_graph_path, exist_ok=True)
+        
         
         range_table = generate_range(results,model_order,
                                  seq_order,
@@ -246,27 +318,32 @@ def gen_range_fig(results,save_dir,size_param=15,linewidth=5,**args):
         models = models[::-1]
     
 
-        plt.figure(figsize=(10,12))    
-        # Plot results for each model
-        for i,model in enumerate(models):
-            if show_legend: 
-                plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size,label=model)
-            else:
-                plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size)
+        fig = plt.figure(figsize=(10,12))
+        ax = fig.gca()
         
-        file = os.path.join(graph_dir,f'{seq}.pdf')
-        plt.xlabel('Range [m]',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.ylabel('Recall@Range',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.grid()
-        plt.ylim(0, 1)
-        plt.tick_params(axis='y', labelsize=size_param) 
-        plt.tick_params(axis='x', labelsize=size_param)
+        # Plot results for each model - always add labels for legend
+        for i,model in enumerate(models):
+            ax.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size,label=model)
+        
+        file = os.path.join(graph_dir,f'{seq}')
+        ax.set_xlabel('Range [m]',fontsize=size_param, labelpad=5)
+        ax.set_ylabel('Recall@Range',fontsize=size_param, labelpad=5)
+        ax.grid()
+        ax.set_ylim(0, 1)
+        ax.tick_params(axis='y', labelsize=size_param) 
+        ax.tick_params(axis='x', labelsize=size_param)
         
         if show_legend:
-            plt.legend(fontsize=size_param)
+            # Show legend in the main plot
+            ax.legend(fontsize=size_param)
+        else:
+            # Save legend separately (don't show in main plot)
+            save_legend_separately(fig, ax, file, fontsize=size_param)
             
-        plt.savefig(file,transparent=True)
+        plt.savefig(f"{file}.pdf", transparent=True)
         plt.close()
+        
+        print(f"\nPlot saved to: {file}.pdf")
         
 # ==========================================================================================================
 #  TOP 25 Graphs
@@ -320,40 +397,42 @@ def gen_top25_fig(results,save_dir,size_param=15,linewidth=5,**args):
             # invert order
             linestyles = linestyles[::-1]
 
-        plt.figure(figsize=(10,12))    
-        if colors != None and linestyles != None:
-            # Plot results for each model
-            for i,model in enumerate(models):
-                if show_legend: 
-                    plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size,label=model)
-                    #sns.lineplot(data=table.loc[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model)
-                else:
-                    plt.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size)
-                    #sns.lineplot(data=table.loc[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i])
-            
-        else:
-            sns.lineplot( data=table,linewidth=linewidth)
+        fig = plt.figure(figsize=(10,12))
+        ax = fig.gca()
         
-        file = os.path.join(graph_dir,f'{seq}.pdf')
+        if colors != None and linestyles != None:
+            # Plot results for each model - always add labels for legend
+            for i,model in enumerate(models):
+                ax.plot(table.loc[model],linewidth=linewidth, linestyle=line_styles[i % len(line_styles)], marker=markers[i % len(markers)],markersize=marker_size,label=model)
+                #sns.lineplot(data=table.loc[model],linewidth=linewidth,color=colors[i],linestyle=linestyles[i],label=model)
+            
+        #else:
+        #    sns.lineplot( data=table,linewidth=linewidth)
+        
+        file = os.path.join(graph_dir,f'{seq}')
 
         
-        plt.xlabel('Top k',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.ylabel('Recall@k',fontsize=size_param, labelpad=5)  # Set x-axis label here
-        plt.grid()
-        plt.ylim(0, 1)
-        plt.tick_params(axis='y', labelsize=size_param) 
-        plt.tick_params(axis='x', labelsize=size_param)
+        ax.set_xlabel('Top k',fontsize=size_param, labelpad=5)
+        ax.set_ylabel('Recall@k',fontsize=size_param, labelpad=5)
+        ax.grid()
+        ax.set_ylim(0, 1)
+        ax.tick_params(axis='y', labelsize=size_param) 
+        ax.tick_params(axis='x', labelsize=size_param)
         
         if show_legend:
-            plt.legend(fontsize=size_param)
+            # Show legend in the main plot
+            ax.legend(fontsize=size_param)
+        else:
+            # Save legend separately (don't show in main plot)
+            save_legend_separately(fig, ax, file, fontsize=size_param)
             
-        plt.savefig(file,transparent=True)
+        plt.savefig(f"{file}.pdf", transparent=True)
         
-        print("\nFile saved to:", file)
+        print(f"\nPlot saved to: {file}.pdf")
         plt.close()
         
 
-def run_top25_graphs(root,seq_order,model_order,show_legend,**args):
+def run_top25_graphs(root,seq_order,model_order,**args):
     
     
     graph_path = args['save_dir']
@@ -374,7 +453,7 @@ def run_top25_graphs(root,seq_order,model_order,show_legend,**args):
         if 'recall.csv' not in csv_file:
             continue
         # get which dataset and model
-        seq_key = [seq for seq in seq_order if seq in file]
+        seq_key   = [seq for seq in seq_order if seq in file]
         model_key = [model for model in model_order if model in file]
         if model_key == [] or seq_key == []:
             continue
@@ -406,8 +485,10 @@ def run_top25_graphs(root,seq_order,model_order,show_legend,**args):
     models = list(set([m for s in matches for m in matches[s]]))
     sequences = list(matches.keys())
     
+    # Reader models using as reference model_order
+    new_model_order = [m for m in model_order if m in models]
     # print all models and sequences
-    print(models)
+    print(new_model_order)
     print(sequences)
     
     
@@ -430,21 +511,9 @@ def run_top25_graphs(root,seq_order,model_order,show_legend,**args):
     results = matches
     
     
-    results = generate_top25(results,model_order,seq_order,["recall.csv"],**args)
-    
-    print(f"***** SAVING TO {graph_path}***********")
-    
-    gen_top25_fig(  results,
-                    graph_path,
-                    size_param     = 30,
-                    linewidth      = 3,
-                    marker_size    = 15,
-                    colors         = COLORS,
-                    linestyles     = LINESTYLES,
-                    show_legend    = show_legend
-    )
-        
-    
+    return results,sequences,models
+
+ 
         
 def main_fig(root,sequences,org_model,save_dir,new_model,ROWS,**args):
     size_param = args['size_param']
@@ -460,15 +529,27 @@ def main_fig(root,sequences,org_model,save_dir,new_model,ROWS,**args):
     # Global
     # ========================================
     files_to_show = ["recall.csv"]
-    pd_array = run_top25_graphs(root,sequences,org_model, 
+    data,seq_order,model_order = run_top25_graphs(root,sequences,org_model, 
                           range = target_range, 
                           res = 3,
                           tag = 'global', 
                           save_dir = save_dir,
-                          new_model_names = new_model,
-                          show_legend = show_legend)
+                          new_model = new_model
+                          )
 
-  
+    results = generate_top25(data,model_order,seq_order,["recall.csv"],**args)
+    
+    print(f"***** SAVING TO {save_dir}***********")
+    
+    gen_top25_fig(  results,
+                    save_dir,
+                    size_param     = 30,
+                    linewidth      = 3,
+                    marker_size    = 15,
+                    colors         = COLORS,
+                    linestyles     = LINESTYLES,
+                    show_legend    = show_legend
+    )
 
 
 if __name__ == "__main__":
@@ -479,7 +560,7 @@ if __name__ == "__main__":
     
     # sequences = ['00','02','05','06','08']  
     
-    sequences = ['PCD_Easy_DARK'] #,'OJ22','OJ23','ON22','SJ23','GTJ23']
+    sequences = ['PCD_MED','PCD_Easy_DARK'] #,'OJ22','OJ23','ON22','SJ23','GTJ23']
     
     model_order = [ #'PointNetGeM',
                     #'PointNetMAC',
@@ -547,10 +628,10 @@ if __name__ == "__main__":
                 size_param = size_param, 
                 topk = topk, 
                 target_range = target_range,
-                show_legend = True)
+                show_legend = False)
     
     
-    range_flag = False
+    range_flag = True
     if range_flag:
         
         graph_path = os.path.join(save_dir,'graphs_range')

@@ -12,7 +12,7 @@ def main_heatmap(root,sequences,model_order,heatmap_path,new_model,ROWS,**args):
     target_range = args['target_range']
     
     idx_y = [i for i,r in enumerate(new_model) if r in ROWS]
-    
+    idx_y = np.arange(len(ROWS))
     # Global
     # ========================================
     # plot only overall PL performance 
@@ -40,7 +40,7 @@ def main_heatmap(root,sequences,model_order,heatmap_path,new_model,ROWS,**args):
         yticks.append(new_model[i])
         
     plt.xticks(np.arange(len(pd_array.columns)) + 0.5,xticks, rotation=45, fontsize=size_param)
-    plt.yticks(np.arange(len(ROWS)) + 0.5, ROWS, rotation=0, fontsize=size_param)
+    plt.yticks(np.arange(len(ROWS)) + 0.5, yticks, rotation=0, fontsize=size_param)
     plt.xlabel('Sequences',fontsize=size_param)
     plt.ylabel('Models',fontsize=size_param)
     #plt.title('Heatmap of Scores')
@@ -52,11 +52,18 @@ def main_heatmap(root,sequences,model_order,heatmap_path,new_model,ROWS,**args):
     # Segments
     # plot the performance for each segment
     
+    ## Get unique  csv files from within the files
+    
     for seq in sequences:
-        files_to_show = ["recall_1.csv","recall_2.csv","recall_3.csv","recall_4.csv","recall_5.csv"]
+        files_to_show = ["recall_0.csv","recall_1.csv","recall_2.csv","recall_3.csv","recall_4.csv","recall_100.csv","recall_101"]
         #sequences = [seq]
         seq = [seq]
-        pd_seg_array = run_table(root,files_to_show,seq,model_order=model_order, topk=topk, range = target_range, tag = 'segments', save_dir = save_dir)
+        pd_seg_array = run_table(root,files_to_show,seq, 
+                                 model_order=model_order, 
+                                 topk=topk, 
+                                 range = target_range, 
+                                 tag = 'segments', 
+                                 save_dir = save_dir)
 
     
         scores = pd_seg_array.to_numpy()
@@ -65,7 +72,9 @@ def main_heatmap(root,sequences,model_order,heatmap_path,new_model,ROWS,**args):
         
         plt.figure(figsize=(15, 10)) # 
         
-        sns.heatmap(values, annot=True, cmap='RdYlGn', linewidths=0.01, fmt='.2f', annot_kws={"size": size_param}, cbar=False, square=True,xticklabels=False, yticklabels=False)
+        sns.heatmap(values, annot=True, cmap='RdYlGn', linewidths=0.01, fmt='.2f', 
+                    annot_kws={"size": size_param}, 
+                    cbar=False, square=True, xticklabels=False, yticklabels=False)
         
         # clean xticks
         xticks = []
@@ -73,12 +82,13 @@ def main_heatmap(root,sequences,model_order,heatmap_path,new_model,ROWS,**args):
             # get the sequence from tuple
             column =  pd_seg_array.columns[i].split('_')[-1].split('.')[0] # Get only the first part of  e.g. ON23_recall
             xticks.append(column)
+        
         yticks = []
         for i in range(len(ROWS)):
             yticks.append(new_model[i])
             
         plt.xticks(np.arange(len(xticks)) + 0.5,xticks, rotation=45, fontsize=size_param)
-        plt.yticks(np.arange(len(ROWS)) + 0.5, ROWS, rotation=0, fontsize=size_param)
+        plt.yticks(np.arange(len(yticks)) + 0.5,yticks, rotation=0, fontsize=size_param)
         plt.xlabel('Segments',fontsize=size_param)
         plt.ylabel('Models',fontsize=size_param)
         #plt.title('Heatmap of Scores')
@@ -92,45 +102,58 @@ def main_heatmap(root,sequences,model_order,heatmap_path,new_model,ROWS,**args):
 
 
 if __name__ == "__main__":
-    root = "/home/tiago/workspace/pointnetgap-RAL/thesis/Thesis_full_add_results"
-    save_dir = "thesis_full_n23_val"
+    root = "/home/tiago/workspace/place_uk/PointNetGAP/saved"
+    #root = "/home/tiago/workspace/pointnetgap-RAL/thesis/Thesis_full_add_results"
+    save_dir = "hortov2_uk"
     
-    sequences = ['ON23','OJ22','OJ23','ON22','SJ23','GTJ23']
+    sequences = ['PCD_MED',"PCD_Easy_DARK"]
     
-    model_order = [ 'PointNetGeM',
-                    'PointNetMAC',
+    model_order = [ #'PointNetGeM',
+                    #'PointNetMAC',
+                    'SPVSoAP3D',
+                    'PointNetPGAP',
                     'PointNetVLAD',
-                    'ResNet50GeM',
-                    'ResNet50MAC',
-                    'ResNet50VLAD',
-                    'SPVGeM',
-                    'SPVMAC',
-                    'SPVVLAD',
-                    'SPVSoAP3D'
+                    'LOGG3D',
+                    'overlap_transformer'
+                    #'ResNet50GeM',
+                    #'ResNet50MAC',
+                    #'ResNet50VLAD',
+                    #'SPVGeM',
+                    #'SPVMAC',
+                    #'SPVVLAD',
+                    
                    ]
     
-    new_model = [ 'PointNetGeM',
-                    'PointNetMAC',
+    new_model = [ #'PointNetGeM',
+                    #'PointNetMAC',
+                    'SPVSoAP3D',
+                    'PointNetPGAP',
                     'PointNetVLAD',
-                    'ResNet50GeM',
-                    'ResNet50MAC',
-                    'ResNet50VLAD',
-                    'SPVGeM',
-                    'SPVMAC',
-                    'SPVVLAD',
-                    'SPVSoAP3D'
+                    'LOGG3D',
+                    'OverlapTransformer'
+                    #'ResNet50GeM',
+                    #'ResNet50MAC',
+                    #'ResNet50VLAD',
+                    #'SPVGeM',
+                    #'SPVMAC',
+                    #'SPVVLAD',
+                    
                    ]
     
     ROWS = [        #'PointNetGeM',
-                    'PointNetMAC',
-                    #'PointNetVLAD',
+                    #'PointNetMAC',
+                    'SPVSoAP3D',
+                    'PointNetPGAP',
+                    'PointNetVLAD',
+                    'LOGG3D',
+                    'overlap_transformer',
                     #'ResNet50GeM',
-                    'ResNet50MAC',
+                    #'ResNet50MAC',
                     #'ResNet50VLAD',
                     #'SPVGeM',
-                    'SPVMAC',
+                    #'SPVMAC',
                     #'SPVVLAD',
-                    #'SPVSoAP3D'
+                    
                    ]
     
     
@@ -139,7 +162,7 @@ if __name__ == "__main__":
     os.makedirs(heatmap_path, exist_ok=True)
     
     size_param = 20
-    topk = 1
+    topk = 10
     target_range = 10 
     
     

@@ -81,6 +81,8 @@ def parse_results(dir,foi, **input_keys):
     Returns:
         _type_: _description_
     """
+    verbose = 0
+    
     files = [os.path.join(dirpath, file) for dirpath, dirnames, files in os.walk(dir) for file in files if file.endswith(foi)]
     
     matches = {}
@@ -100,7 +102,8 @@ def parse_results(dir,foi, **input_keys):
         for key,value in input_keys.items():
             if not isinstance(value,str):
                 # VALUE is the position in string
-                print(f"{key}: {file_Struct[value]}")
+                if verbose:
+                    print(f"{key}: {file_Struct[value]}")
                 key_values[key]=file_Struct[value]
             else: 
                 key_index = np.array([i for i,field in enumerate(file_Struct) if field.startswith(value) or value in field ]) # no repeated keys
@@ -379,7 +382,10 @@ def generate_density(results,models,sequences,topk=10,range=10,res=3,**args):
 class plot_graph():
  def __init__(self,save_dir,size_param=15,linewidth=5,**args):
     
-    
+    self.grid_on = False 
+    if "grid" in args:
+        self.grid_on = args["grid"]
+        
     self.marker_size = 15
     if "marker_size" in args:
         self.marker_size = args["marker_size"]
@@ -470,7 +476,10 @@ class plot_graph():
         
         plt.xlabel('Scan Size',fontsize=self.size_param, labelpad=5)  # Set x-axis label here
         plt.ylabel(f'Recall@{topk}',fontsize=self.size_param, labelpad=5)  # Set x-axis label here
-        plt.grid()
+        
+        if self.grid_on==True:
+            plt.grid()
+            
         plt.ylim(0, 1)
         plt.tick_params(axis='y', labelsize=self.size_param) 
         plt.tick_params(axis='x', labelsize=self.size_param)
@@ -596,11 +605,9 @@ if __name__ == "__main__":
  
     root = "/home/tiago/workspace/pointnetgap-RAL/thesis/Thesis_density"
     
-    save_dir = "thesis_density_selected_seq"
+    save_dir = "thesis_density_selected_seqv2"
     
-    # sequences = ['00','02','05','06','08']  
-    
-    sequences = ['OJ23','ON23']#'ON23','OJ23','ON22','SJ23','GTJ23']
+    sequences = ['OJ23','ON23','ON22','GTJ23']#'ON23','OJ23','ON22','SJ23','GTJ23']
     
     model_order = [ #'PointNetGeM',
                     #'PointNetMAC',
@@ -637,17 +644,18 @@ if __name__ == "__main__":
     topk = 10
     target_range = 1 
     
-    
-    graph_path = os.path.join(save_dir,'graphs',str(target_range)+'m')
-    os.makedirs(graph_path, exist_ok=True)
-    
-    
-    main_fig(root,sequences,model_order,graph_path,new_model,
-             size_param = 20, 
-             topk = topk, 
-             target_range = target_range,
-             show_legend = False)
-     
+    for topk in [1,5,10]:
+        for target_range in [1,5,10]:
+            graph_path = os.path.join(save_dir,'graphs',str(target_range)+'m')
+            os.makedirs(graph_path, exist_ok=True)
+            
+            
+            main_fig(root,sequences,model_order,graph_path,new_model,
+                    size_param = 20, 
+                    topk = topk, 
+                    target_range = target_range,
+                    show_legend = False)
+        
     
     
     
